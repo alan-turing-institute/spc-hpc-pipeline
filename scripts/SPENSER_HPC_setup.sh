@@ -115,62 +115,68 @@ mkdir -p data/
 echo
 echo "SPENSER packages pulled and installed."
 
-echo
-echo "Now testing all packages"
-echo
-
-echo
-echo -e "\e[31mTesting UKCensusAPI...\e[0m"
-echo
-
-cd ../UKCensusAPI
-pytest
-
-echo
-echo -e "\e[31mTesting ukpopulation...\e[0m"
-echo
-
-cd ../ukpopulation
-./setup.py test
-
-echo
-echo -e "\e[31mTesting humanleague...\e[0m"
-echo
-
-cd ../humanleague
-pytest
-
-echo
-echo -e "\e[31mTesting household_microsynth...\e[0m"
-echo -e "\e[31mHave to run tests once first (that will fail) to download the correct zip file,\e[0m"
-echo -e "\e[31mthen we can unzip it and run tests again\e[0m"
-echo
-
-cd ../household_microsynth
-./setup.py test
-cd cache
-unzip Output_Area_blk.zip
-cd ..
-./setup.py test
-
-echo
-echo -e "\e[31mGenerating test data for microsimulation testing...\e[0m"
-echo
 
 # Have to run household_microsynth for E09000001 (Ealing?) to produce data for
 # microsimulation tests to pass
-scripts/run_microsynth.py E09000001 OA11
-
-echo
-echo -e "\e[31mTesting microsimulation...\e[0m"
-echo -e "\e[31mThis is weird because we have to run the tests twice for them to pass\e[0m"
-echo -e "\e[31mPossibly a timeout?\e[0m"
-echo
-
-cd ../microsimulation
-./setup.py test
-
-cd ..
-echo
-echo -e "\e[31mSetup complete!\e[0m"
-
+cd ../household_microsynth
+scripts/run_microsynth.py $1 OA11
+#
+#echo
+#echo "Now testing all packages"
+#echo
+#
+#echo
+#echo -e "\e[31mTesting UKCensusAPI...\e[0m"
+#echo
+#
+#cd ../UKCensusAPI
+#pytest
+#
+#echo
+#echo -e "\e[31mTesting ukpopulation...\e[0m"
+#echo
+#
+#cd ../ukpopulation
+#./setup.py test
+#
+#echo
+#echo -e "\e[31mTesting humanleague...\e[0m"
+#echo
+#
+#cd ../humanleague
+#pytest
+#
+#echo
+#echo -e "\e[31mTesting household_microsynth...\e[0m"
+#echo -e "\e[31mHave to run tests once first (that will fail) to download the correct zip file,\e[0m"
+#echo -e "\e[31mthen we can unzip it and run tests again\e[0m"
+#echo
+#
+#cd ../household_microsynth
+#./setup.py test
+#cd cache
+#unzip Output_Area_blk.zip
+#cd ..
+#./setup.py test
+#
+#echo
+#echo -e "\e[31mGenerating test data for microsimulation testing...\e[0m"
+#echo
+#
+## Have to run household_microsynth for E09000001 (Ealing?) to produce data for
+## microsimulation tests to pass
+#scripts/run_microsynth.py $1 OA11
+#
+#echo
+#echo -e "\e[31mTesting microsimulation...\e[0m"
+#echo -e "\e[31mThis is weird because we have to run the tests twice for them to pass\e[0m"
+#echo -e "\e[31mPossibly a timeout?\e[0m"
+#echo
+#
+#cd ../microsimulation
+#./setup.py test
+#
+#cd ..
+#echo
+#echo -e "\e[31mSetup complete!\e[0m"
+#
