@@ -33,6 +33,7 @@ import io
 import os
 import sys
 import time
+import argparse
 
 from azure.storage.blob import (
     BlobServiceClient,
@@ -46,6 +47,7 @@ import azure.batch.models as batchmodels
 from azure.core.exceptions import ResourceExistsError
 
 import config
+import pandas as pd
 
 DEFAULT_ENCODING = "utf-8"
 
@@ -212,26 +214,26 @@ def create_job(batch_service_client: BatchServiceClient, job_id: str, pool_id: s
     batch_service_client.job.add(job)
 
 
-def add_tasks(batch_service_client: BatchServiceClient, job_id: str, resource_input_files: list, input_container_name: str,blob_service_client):
+def add_tasks(batch_service_client: BatchServiceClient, job_id: str, resource_input_file: str, input_container_name: str, LAD_tasks):
     """
     Adds a task for each input file in the collection to the specified job.
 
     :param batch_service_client: A Batch service client.
     :param str job_id: The ID of the job to which to add the tasks.
-    :param list resource_input_files: A collection of input files. One task will be
-     created for each input file.
+    :param list resource_input_file: Input script file to be ran on command.
     :param str container_name: The name of the Azure Blob storage container.
+    :param list task_files: A collection of inputs to be run as arguments to script. One task will be
+     created for each argument file.
     """
 
-    print(f'Adding {resource_input_files} tasks to job [{job_id}]...')
+    print(f'Adding {LAD_tasks} tasks to job [{job_id}]...')
 
     tasks = []
 
-    for idx, input_file in enumerate(resource_input_files):
+    for idx, lad in enumerate(LAD_tasks):
 
-        command = f"/bin/bash {input_file.file_path}"
-        #output_file_path = './data/hh_E09000002_OA11_2011.csv'
-        output_file_path = 'household_microsynth/output.txt'
+        command = f"/bin/bash {resource_input_file.file_path} {lad}"
+        output_file_path = f"household_microsynth/data/hh_{lad}_OA11_2011.csv"
 
 
         sas_token = generate_container_sas(
@@ -254,9 +256,9 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, resource_in
         )
 
         tasks.append(batchmodels.TaskAddParameter(
-            id=f'Task{idx}',
+            id=f'Task{idx}_{lad}',
             command_line=command,
-            resource_files=[input_file],
+            resource_files=[resource_input_file],
             user_identity=user,
             output_files=[batchmodels.OutputFile(
                 file_pattern=output_file_path,
@@ -362,6 +364,31 @@ def _read_stream_as_string(stream, encoding) -> str:
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--upload_files", help="Path to files to be uploaded", required=True)
+    parser.add_argument("--script_file_name", help="Bash script to be ran on jobs", required=True)
+    parser.add_argument("--lads", dest='alist',
+                        type=str, nargs='*', help="Examples: --lads E06000001 E06000002 E06000003 E06000004")
+    parser.add_argument("--lads_file", help="Path to files with LAD data to be used")
+
+    args = parser.parse_args()
+
+    if not args.alist and not args.lads_file:
+        raise RuntimeError('Error: Need to provide either a LAD file or a list of LAD names')
+
+    if args.alist:
+        lads_list = args.alist
+    elif args.lads_file:
+        try:
+            lads_list = pd.read_csv(args.lads_file)['LAD20CD'].values
+        except KeyError:
+            raise RuntimeError('Data csv file must have a column named LAD20CD')
+
+
+
+
+
+
     start_time = datetime.datetime.now().replace(microsecond=0)
     print(f'Sample start: {start_time}')
     print()
@@ -375,20 +402,38 @@ if __name__ == '__main__':
 
     # Use the blob client to create the containers in Azure Storage if they
     # don't yet exist.
-    input_container_name = 'input'      # pylint: disable=invalid-name
+    input_container_name = 'scpoutputs'      # pylint: disable=invalid-name
     try:
         blob_service_client.create_container(input_container_name)
 
     except ResourceExistsError:
         pass
 
-    # The collection of data files that are to be processed by the tasks.
-    input_file_paths = [os.path.join(sys.path[0], 'scripts/test_upload.sh')]
+    # The collection of data files that are needed to run the tasks.
+
+    filepaths_to_upload = []
+    for root, dirs, files in os.walk(args.upload_files):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            filepaths_to_upload.append(filepath)
+
 
     # Upload the data files.
     input_files = [
         upload_file_to_container(blob_service_client, input_container_name, file_path)
-        for file_path in input_file_paths]
+        for file_path in filepaths_to_upload]
+
+
+    index = -1
+    for idx, files in enumerate(filepaths_to_upload):
+        if os.path.basename(files) == args.script_file_name:
+            index = idx
+
+    if index==-1:
+        raise RuntimeError('Error: Script to be run is not found in the input path: '+ args.upload_files)
+
+
+
 
     # Create a Batch service client. We'll now be interacting with the Batch
     # service in addition to Storage
@@ -408,14 +453,14 @@ if __name__ == '__main__':
         create_job(batch_client, config.JOB_ID, config.POOL_ID)
 
         # Add the tasks to the job.
-        add_tasks(batch_client, config.JOB_ID, input_files, input_container_name,blob_service_client)
+        add_tasks(batch_client, config.JOB_ID, input_files[index], input_container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
         wait_for_tasks_to_complete(batch_client,
                                    config.JOB_ID,
                                    datetime.timedelta(minutes=60))
 
-        print("  Success! All tasks reached the 'Completed' state within the "
+        print("Success! All tasks reached the 'Completed' state within the "
               "specified timeout period.")
 
         # Print the stdout.txt and stderr.txt files for each task to the console
