@@ -153,11 +153,11 @@ def upload_file_to_container(blob_storage_service_client: BlobServiceClient,
 
 
 def generate_sas_url(
-    account_name: str,
-    account_domain: str,
-    container_name: str,
-    blob_name: str,
-    sas_token: str
+        account_name: str,
+        account_domain: str,
+        container_name: str,
+        blob_name: str,
+        sas_token: str
 ) -> str:
     """
     Generates and returns a sas url for accessing blob storage
@@ -214,13 +214,15 @@ def create_job(batch_service_client: BatchServiceClient, job_id: str, pool_id: s
     batch_service_client.job.add(job)
 
 
-def add_tasks(batch_service_client: BatchServiceClient, job_id: str, resource_input_file: str, input_container_name: str, LAD_tasks):
+def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_script_file: str, config_ssm: str,
+              config_ssm_h: str, config_ass: str,
+              input_container_name: str, LAD_tasks):
     """
     Adds a task for each input file in the collection to the specified job.
 
     :param batch_service_client: A Batch service client.
     :param str job_id: The ID of the job to which to add the tasks.
-    :param list resource_input_file: Input script file to be ran on command.
+    :param list input_script_file: Input script file to be ran on command.
     :param str container_name: The name of the Azure Blob storage container.
     :param list task_files: A collection of inputs to be run as arguments to script. One task will be
      created for each argument file.
@@ -231,10 +233,11 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, resource_in
     tasks = []
 
     for idx, lad in enumerate(LAD_tasks):
+        command = "/bin/bash {} {} {} {}".format(
+            input_script_file.file_path, lad, config_ssm.file_path, config_ssm_h.file_path, config_ass.file_path
+        )
 
-        command = f"/bin/bash {resource_input_file.file_path} {lad}"
-        output_file_path = f"household_microsynth/data/hh_{lad}_OA11_2011.csv"
-
+        output_file_path = [f"microsimulation/data/*{lad}*.csv", f"household_microsynth/data/*{lad}*.csv"]
 
         sas_token = generate_container_sas(
             config.STORAGE_ACCOUNT_NAME,
@@ -247,7 +250,6 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, resource_in
         container_sas_url = "https://{}.blob.core.windows.net/{}?{}".format(
             config.STORAGE_ACCOUNT_NAME, input_container_name, sas_token)
 
-
         user = batchmodels.UserIdentity(
             auto_user=batchmodels.AutoUserSpecification(
                 elevation_level=batchmodels.ElevationLevel.admin,
@@ -258,13 +260,13 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, resource_in
         tasks.append(batchmodels.TaskAddParameter(
             id=f'Task{idx}_{lad}',
             command_line=command,
-            resource_files=[resource_input_file],
+            resource_files=[input_script_file, config_ssm, config_ssm_h, config_ass],
             user_identity=user,
             output_files=[batchmodels.OutputFile(
                 file_pattern=output_file_path,
                 destination=batchmodels.OutputFileDestination(
                     container=batchmodels.OutputFileBlobContainerDestination(
-                        container_url=container_sas_url)),
+                        container_url=container_sas_url, path=lad)),
                 upload_options=batchmodels.OutputFileUploadOptions(
                     upload_condition=batchmodels.OutputFileUploadCondition.task_success))]
         )
@@ -307,7 +309,7 @@ def wait_for_tasks_to_complete(batch_service_client: BatchServiceClient, job_id:
 
 
 def print_task_output(batch_service_client: BatchServiceClient, job_id: str,
-                      text_encoding: str=None):
+                      text_encoding: str = None):
     """
     Prints the stdout.txt file for each task in the job.
 
@@ -336,8 +338,8 @@ def print_task_output(batch_service_client: BatchServiceClient, job_id: str,
         if text_encoding is None:
             text_encoding = DEFAULT_ENCODING
 
-        sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding = text_encoding)
-        sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding = text_encoding)
+        sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding=text_encoding)
+        sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding=text_encoding)
 
         print("Standard output:")
         print(file_text)
@@ -384,11 +386,6 @@ if __name__ == '__main__':
         except KeyError:
             raise RuntimeError('Data csv file must have a column named LAD20CD')
 
-
-
-
-
-
     start_time = datetime.datetime.now().replace(microsecond=0)
     print(f'Sample start: {start_time}')
     print()
@@ -402,7 +399,7 @@ if __name__ == '__main__':
 
     # Use the blob client to create the containers in Azure Storage if they
     # don't yet exist.
-    input_container_name = 'scpoutputs'      # pylint: disable=invalid-name
+    input_container_name = 'scpoutput'  # pylint: disable=invalid-name
     try:
         blob_service_client.create_container(input_container_name)
 
@@ -417,28 +414,39 @@ if __name__ == '__main__':
             filepath = os.path.join(root, filename)
             filepaths_to_upload.append(filepath)
 
-
     # Upload the data files.
     input_files = [
         upload_file_to_container(blob_service_client, input_container_name, file_path)
         for file_path in filepaths_to_upload]
 
-
-    index = -1
+    index_script = -1
+    index_ssm_h = -1
+    index_ssm = -1
+    index_ass = -1
     for idx, files in enumerate(filepaths_to_upload):
-        if os.path.basename(files) == args.script_file_name:
-            index = idx
+        file_name = os.path.basename(files)
+        if file_name == args.script_file_name:
+            index_script = idx
+        elif 'ssm_h_current' in file_name:
+            index_ssm_h = idx
+        elif 'ssm_current' in file_name:
+            index_ssm = idx
+        elif 'ass_current' in file_name:
+            index_ass = idx
 
-    if index==-1:
-        raise RuntimeError('Error: Script to be run is not found in the input path: '+ args.upload_files)
-
-
-
+    if index_script == -1:
+        raise RuntimeError('Error: Script to be run is not found in the input path: ' + args.upload_files)
+    if index_ssm_h == -1:
+        raise RuntimeError('Error: ssm_h_current.json file not file in the input path: ' + args.upload_files)
+    if index_ssm == -1:
+        raise RuntimeError('Error: ssm_current.json file not found in the input path: ' + args.upload_files)
+    if index_ass == -1:
+        raise RuntimeError('Error: ass_current.json file not found in the input path: ' + args.upload_files)
 
     # Create a Batch service client. We'll now be interacting with the Batch
     # service in addition to Storage
     credentials = SharedKeyCredentials(config.BATCH_ACCOUNT_NAME,
-        config.BATCH_ACCOUNT_KEY)
+                                       config.BATCH_ACCOUNT_KEY)
 
     batch_client = BatchServiceClient(
         credentials,
@@ -453,12 +461,14 @@ if __name__ == '__main__':
         create_job(batch_client, config.JOB_ID, config.POOL_ID)
 
         # Add the tasks to the job.
-        add_tasks(batch_client, config.JOB_ID, input_files[index], input_container_name, lads_list)
+        add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files[index_ssm],
+                  input_files[index_ssm_h],
+                  input_files[index_ass], input_container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
         wait_for_tasks_to_complete(batch_client,
                                    config.JOB_ID,
-                                   datetime.timedelta(minutes=60))
+                                   datetime.timedelta(minutes=120))
 
         print("Success! All tasks reached the 'Completed' state within the "
               "specified timeout period.")
@@ -491,4 +501,3 @@ if __name__ == '__main__':
 
         if query_yes_no('Delete pool?') == 'yes':
             batch_client.pool.delete(config.POOL_ID)
- 
