@@ -116,10 +116,22 @@ echo
 echo "SPENSER packages pulled and installed."
 
 
-# Have to run household_microsynth for E09000001 (Ealing?) to produce data for
+# Have to run household_microsynth for LAD to produce data for
 # microsimulation tests to pass
 cd ../household_microsynth
 scripts/run_microsynth.py $1 OA11
+
+echo 'Moving to run microsimulation'
+cd ../
+mv $2 microsimulation/.
+mv $3 microsimulation
+mv $4 microsimulation
+
+cd ../microsimulation
+scripts/run_ssm.py -c $2 $1
+scripts/run_ssm_h.py -c $3 $1
+scripts/run_assignment.py -c $4 $1
+
 #
 #echo
 #echo "Now testing all packages"
