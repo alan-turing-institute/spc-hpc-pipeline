@@ -5,4 +5,5 @@ git clone -b arc --single-branch https://github.com/nismod/household_microsynth.
 
 
 cd household_microsynth
-cat README.md > output.txt
+cat README.md > output1.txt
+cat README.md > output2.txt
