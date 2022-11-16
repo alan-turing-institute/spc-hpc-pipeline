@@ -233,11 +233,11 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
     tasks = []
 
     for idx, lad in enumerate(LAD_tasks):
-        command = "/bin/bash {} {} {} {}".format(
+        command = "/bin/bash {} {} {} {} {}".format(
             input_script_file.file_path, lad, config_ssm.file_path, config_ssm_h.file_path, config_ass.file_path
         )
 
-        output_file_path = [f"microsimulation/data/*{lad}*.csv", f"household_microsynth/data/*{lad}*.csv"]
+        output_file_path = f"*/data/*{lad}*.csv"
 
         sas_token = generate_container_sas(
             config.STORAGE_ACCOUNT_NAME,
