@@ -1,31 +1,7 @@
-# python quickstart client Code Sample
+# This script is based on the python quickstart client Code Sample with Copyright (c) Microsoft Corporation
 #
-# Copyright (c) Microsoft Corporation
-#
-# All rights reserved.
-#
-# MIT License
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
-
 """
-Create a pool of nodes to output text files from azure blob storage.
+Create a pool of nodes to run the SCP pipeline and store results on azure blob storage.
 """
 
 import datetime
@@ -236,17 +212,21 @@ def create_job(batch_service_client: BatchServiceClient, job_id: str, pool_id: s
 
 
 def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_script_file: str, config_ssm: str,
-              config_ssm_h: str, config_ass: str,
+              config_ssm_h: str, config_ass: str, nomis_file: str,
               input_container_name: str, LAD_tasks):
     """
     Adds a task for each input file in the collection to the specified job.
 
-    :param batch_service_client: A Batch service client.
-    :param str job_id: The ID of the job to which to add the tasks.
-    :param list input_script_file: Input script file to be ran on command.
-    :param str container_name: The name of the Azure Blob storage container.
-    :param list task_files: A collection of inputs to be run as arguments to script. One task will be
-     created for each argument file.
+    :param batch_service_client:  A Batch service client.
+    :param job_id:  The ID of the job to which to add the tasks.
+    :param input_script_file: Input script file to be ran on command.
+    :param config_ssm: Script configuration file 1
+    :param config_ssm_h: Script configuration file 2
+    :param config_ass: Script configuration file 3
+    :param nomis_file: Nomis API key
+    :param input_container_name: The name of the Azure Blob storage container.
+    :param LAD_tasks: A collection of inputs to be run as arguments to script. One task will be created for each argument file.
+
     """
 
     print(f'Adding {LAD_tasks} tasks to job [{job_id}]...')
@@ -281,7 +261,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
         tasks.append(batchmodels.TaskAddParameter(
             id=f'Task{idx}_{lad}',
             command_line=command,
-            resource_files=[input_script_file, config_ssm, config_ssm_h, config_ass],
+            resource_files=[input_script_file, config_ssm, config_ssm_h, config_ass, nomis_file],
             user_identity=user,
             output_files=[batchmodels.OutputFile(
                 file_pattern=output_file_path,
@@ -444,10 +424,13 @@ if __name__ == '__main__':
         upload_file_to_container(blob_service_client, container_name, file_path)
         for file_path in filepaths_to_upload]
 
+    # very hacky, need to change it to a better way...
     index_script = -1
     index_ssm_h = -1
     index_ssm = -1
     index_ass = -1
+    index_nomis = -1
+
     for idx, files in enumerate(filepaths_to_upload):
         file_name = os.path.basename(files)
         if file_name == args.script_file_name:
@@ -458,6 +441,10 @@ if __name__ == '__main__':
             index_ssm = idx
         elif 'ass_current' in file_name:
             index_ass = idx
+        elif 'ass_current' in file_name:
+            index_ass = idx
+        elif 'NOMIS_API_KEY' in file_name:
+            index_nomis = idx
 
     if index_script == -1:
         raise RuntimeError('Error: Script to be run is not found in the input path: ' + args.upload_files)
@@ -488,7 +475,7 @@ if __name__ == '__main__':
         # Add the tasks to the job.
         add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files[index_ssm],
                   input_files[index_ssm_h],
-                  input_files[index_ass], container_name, lads_list)
+                  input_files[index_ass], input_files[index_nomis], container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
         wait_for_tasks_to_complete(batch_client,
