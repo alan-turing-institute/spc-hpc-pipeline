@@ -46,7 +46,7 @@ git clone -b arc --single-branch https://github.com/nismod/household_microsynth.
 
 git clone -b arc --single-branch https://github.com/nismod/microsimulation.git
 
-export API_KEY=`cat config.txt`
+export API_KEY=`cat NOMIS_API_KEY.txt`
 
 # Create caches and write the API key to where it is required
 mkdir -p cache/
@@ -137,9 +137,6 @@ cat $3
 echo 'Step 1'
 cd microsimulation
 scripts/run_ssm.py -c config/$2 $1
-
-ls ../household_microsynth/data/
-ls data/
 
 echo 'Step 2'
 scripts/run_ssm_h.py -c config/$3 $1
