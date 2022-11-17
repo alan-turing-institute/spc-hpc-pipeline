@@ -45,11 +45,32 @@ from azure.batch import BatchServiceClient
 from azure.batch.batch_auth import SharedKeyCredentials
 import azure.batch.models as batchmodels
 from azure.core.exceptions import ResourceExistsError
-
+import re
 import config
 import pandas as pd
 
 DEFAULT_ENCODING = "utf-8"
+
+def sanitize_container_name(orig_name):
+    """
+    only allowed alphanumeric characters and dashes.
+    """
+    sanitized_name = ""
+    previous_character = None
+    for character in orig_name:
+        if not re.search("[-a-zA-Z\d]", character):
+            if not previous_character == "-":
+                sanitized_name += "-"
+                previous_character = "-"
+            else:
+                continue
+        else:
+            sanitized_name += character.lower()
+            previous_character = character
+    if "\\" in sanitized_name:
+        sanitized_name = sanitized_name.replace("\\","/")
+
+    return sanitized_name
 
 
 # Update the Batch and Storage account credential strings in config.py with values
@@ -399,9 +420,13 @@ if __name__ == '__main__':
 
     # Use the blob client to create the containers in Azure Storage if they
     # don't yet exist.
-    input_container_name = 'scpoutput'  # pylint: disable=invalid-name
+    container_name = 'scp'  # pylint: disable=invalid-name
+    current_time = time.strftime("%Y-%m-%d_%H-%M-%S")
+    container_name += "__" + current_time
+    container_name = sanitize_container_name(container_name)
+
     try:
-        blob_service_client.create_container(input_container_name)
+        blob_service_client.create_container(container_name)
 
     except ResourceExistsError:
         pass
@@ -416,7 +441,7 @@ if __name__ == '__main__':
 
     # Upload the data files.
     input_files = [
-        upload_file_to_container(blob_service_client, input_container_name, file_path)
+        upload_file_to_container(blob_service_client, container_name, file_path)
         for file_path in filepaths_to_upload]
 
     index_script = -1
@@ -463,7 +488,7 @@ if __name__ == '__main__':
         # Add the tasks to the job.
         add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files[index_ssm],
                   input_files[index_ssm_h],
-                  input_files[index_ass], input_container_name, lads_list)
+                  input_files[index_ass], container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
         wait_for_tasks_to_complete(batch_client,
@@ -491,7 +516,7 @@ if __name__ == '__main__':
 
     finally:
       # Clean up storage resources
-        print(f'Deleting container [{input_container_name}]...')
+        print(f'Deleting container [{container_name}]...')
         # Clean up Batch resources (if the user so chooses).
         if query_yes_no('Delete job?') == 'yes':
             batch_client.job.delete(config.JOB_ID)
