@@ -244,7 +244,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
             input_container_name,
             account_key=config.STORAGE_ACCOUNT_KEY,
             permission=BlobSasPermissions(read=True, write=True),
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=10)
         )
 
         container_sas_url = "https://{}.blob.core.windows.net/{}?{}".format(
@@ -367,11 +367,11 @@ def _read_stream_as_string(stream, encoding) -> str:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--upload_files", help="Path to files to be uploaded", required=True)
-    parser.add_argument("--script_file_name", help="Bash script to be ran on jobs", required=True)
-    parser.add_argument("--lads", dest='alist',
-                        type=str, nargs='*', help="Examples: --lads E06000001 E06000002 E06000003 E06000004")
-    parser.add_argument("--lads_file", help="Path to files with LAD data to be used")
+    parser.add_argument("--upload_files", help="Path to files to be uploaded to batch container and used to run the script.", required=True)
+    parser.add_argument("--script_file_name", help="Name of bash script to be ran on jobs, should exist in the path provided by '--upload_files' ", required=True)
+    parser.add_argument("--lads", dest='alist', help="LADs codes to be ran in parallel, one code per task. Examples: --lads E06000001 E06000002 E06000003 E06000004 ",
+                        type=str, nargs='*')
+    parser.add_argument("--lads_file", help="Path to CSV file containing the LAD codes to be used, under a column names \"LAD20CD\"")
 
     args = parser.parse_args()
 
@@ -468,7 +468,7 @@ if __name__ == '__main__':
         # Pause execution until tasks reach Completed state.
         wait_for_tasks_to_complete(batch_client,
                                    config.JOB_ID,
-                                   datetime.timedelta(minutes=120))
+                                   datetime.timedelta(minutes=600))
 
         print("Success! All tasks reached the 'Completed' state within the "
               "specified timeout period.")
@@ -492,12 +492,10 @@ if __name__ == '__main__':
     finally:
       # Clean up storage resources
         print(f'Deleting container [{input_container_name}]...')
-        if query_yes_no('Delete container?') == 'yes':
-            blob_service_client.delete_container(input_container_name)
-
         # Clean up Batch resources (if the user so chooses).
         if query_yes_no('Delete job?') == 'yes':
             batch_client.job.delete(config.JOB_ID)
 
         if query_yes_no('Delete pool?') == 'yes':
             batch_client.pool.delete(config.POOL_ID)
+
