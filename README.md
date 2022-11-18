@@ -23,8 +23,13 @@ pip install -r requirements.txt
 ```
 from your preferred environment in the top level directory of this repo.
 
+## Setting up your NOMIS API key
 
--------------------------------------
+Ths SCP pipeline uses an API by Nomisweb which allows relatively easy programmatic access the to data.
+Nomisweb currently hosts the ONS principal NPP data for the UK, the SNPP data for England, and all of the MYE data.
+
+You need to obtain a NOMIS API key and add it to the `scripts/scp/NOMIS_API_KEY.txt` file before running any SCP jobs.
+
 
 ## Running the SPC pipeline on batch
 
@@ -48,12 +53,6 @@ options:
                         Path to CSV file containing the LAD codes to be used, under a column names "LAD20CD"
 ```
 
-**Important: NOMIS API key**
-
-Ths SCP pipeline uses an API provided by Nomisweb  which allows relatively easy programmatic access the to data.
-Nomisweb currently hosts the ONS principal NPP data for the UK, the SNPP data for England, and all of the MYE data.
-
-You need to obtain a NOMIS API key and add it to the `scripts/scp/NOMIS_API_KEY.txt` file before running any SCP jobs.
 
 ### Quickstart 
 
@@ -92,9 +91,8 @@ To be added.
 (This section is only necessary if you are interested in knowing more about how this works - if you just want to run the jobs, the instructions above should suffice.)
 
 When you run the command
-```
+
 ``python spc-hpc-client.py --upload_files scripts/scp --script_file_name SPENSER_HPC_setup.sh --lads E06000001 E06000002 E06000003 E06000004``
-```
 
 The batch functionality is implemented at the LAD level and follows the next steps.   
 * Creates a new batch "Job" with a name composed of the `JOB_ID` variable from the `config.py` file as the name
@@ -120,7 +118,7 @@ The execution of a single Task on a batch node (which is an Ubuntu-X.X VM) is go
 
 For this pipeline the command ran on a given task is the following:
 
-`/bin/bash SPENSER_HPC_setup.sh E06000001 ssm_current.json ssm_h_current.json ass_current.json`
+``/bin/bash SPENSER_HPC_setup.sh E06000001 ssm_current.json ssm_h_current.json ass_current.json``
 
 The basic flow of the SPENSER_HPC_setup.sh script is:
 * Install some packages, including miniconda, and create and activate a Python 3.9 conda environment.
