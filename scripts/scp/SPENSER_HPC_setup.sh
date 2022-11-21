@@ -1,4 +1,8 @@
 #!/bin/sh
+
+now=$(date +"%T")
+echo "Current time : $now"
+
 # Download (and install) all git repo's
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
@@ -12,8 +16,6 @@ conda create -n spc_env -y python=3.9
 conda init bash
 source ~/.bashrc
 conda activate spc_env
-
-echo "Conda version $(conda --version)"
 
 # Check if in conda env
 if [ "$CONDA_DEFAULT_ENV" == "" ]; then
@@ -44,7 +46,7 @@ git clone -b arc --single-branch https://github.com/nismod/household_microsynth.
 
 git clone -b arc --single-branch https://github.com/nismod/microsimulation.git
 
-export API_KEY="0x19c22fbcecbb026b54ad2a12192a4ad268fe8aae"
+export API_KEY=`cat NOMIS_API_KEY.txt`
 
 # Create caches and write the API key to where it is required
 mkdir -p cache/
@@ -102,6 +104,9 @@ cd ../household_microsynth
 ./setup.py install
 # Make data directory if not already exists
 mkdir -p data/
+cd cache
+unzip Output_Area_blk.zip
+cd ..
 
 echo
 echo -e "\e[31mInstalling microsimulation...\e[0m"
@@ -115,62 +120,35 @@ mkdir -p data/
 echo
 echo "SPENSER packages pulled and installed."
 
-echo
-echo "Now testing all packages"
-echo
 
-echo
-echo -e "\e[31mTesting UKCensusAPI...\e[0m"
-echo
-
-cd ../UKCensusAPI
-pytest
-
-echo
-echo -e "\e[31mTesting ukpopulation...\e[0m"
-echo
-
-cd ../ukpopulation
-./setup.py test
-
-echo
-echo -e "\e[31mTesting humanleague...\e[0m"
-echo
-
-cd ../humanleague
-pytest
-
-echo
-echo -e "\e[31mTesting household_microsynth...\e[0m"
-echo -e "\e[31mHave to run tests once first (that will fail) to download the correct zip file,\e[0m"
-echo -e "\e[31mthen we can unzip it and run tests again\e[0m"
-echo
-
-cd ../household_microsynth
-./setup.py test
-cd cache
-unzip Output_Area_blk.zip
-cd ..
-./setup.py test
-
-echo
-echo -e "\e[31mGenerating test data for microsimulation testing...\e[0m"
-echo
-
-# Have to run household_microsynth for E09000001 (Ealing?) to produce data for
+# Have to run household_microsynth for LAD to produce data for
 # microsimulation tests to pass
-scripts/run_microsynth.py E09000001 OA11
+cd ../household_microsynth
+scripts/run_microsynth.py $1 OA11
 
-echo
-echo -e "\e[31mTesting microsimulation...\e[0m"
-echo -e "\e[31mThis is weird because we have to run the tests twice for them to pass\e[0m"
-echo -e "\e[31mPossibly a timeout?\e[0m"
-echo
-
-cd ../microsimulation
-./setup.py test
-
+echo 'Moving to run microsimulation'
 cd ..
-echo
-echo -e "\e[31mSetup complete!\e[0m"
+mv $2 microsimulation/config/
+mv $3 microsimulation/config/
+mv $4 microsimulation/config/
+
+cat $3
+
+echo 'Step 1'
+cd microsimulation
+scripts/run_ssm.py -c config/$2 $1
+
+echo 'Step 2'
+scripts/run_ssm_h.py -c config/$3 $1
+
+echo 'Step 2, running again because reasons'
+scripts/run_ssm_h.py -c config/$3 $1
+
+echo 'Step 3'
+scripts/run_assignment.py -c config/$4 $1
+
+echo 'Done!'
+
+now=$(date +"%T")
+echo "Current time : $now"
 
