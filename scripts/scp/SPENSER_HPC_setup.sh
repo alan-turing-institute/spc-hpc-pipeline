@@ -38,7 +38,7 @@ git clone https://github.com/virgesmith/humanleague.git
 
 git clone -b arc --single-branch https://github.com/nismod/household_microsynth.git
 
-git clone -b arc --single-branch https://github.com/nismod/microsimulation.git
+git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
 
 export API_KEY=`cat NOMIS_API_KEY.txt`
 
@@ -126,16 +126,11 @@ mv $2 microsimulation/config/
 mv $3 microsimulation/config/
 mv $4 microsimulation/config/
 
-cat $3
-
 echo 'Step 1'
 cd microsimulation
 scripts/run_ssm.py -c config/$2 $1
 
 echo 'Step 2'
-scripts/run_ssm_h.py -c config/$3 $1
-
-echo 'Step 2, running again because reasons'
 scripts/run_ssm_h.py -c config/$3 $1
 
 echo 'Step 3'
