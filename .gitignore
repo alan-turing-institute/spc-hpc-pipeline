@@ -1,4 +1,4 @@
 # nomis secrets
-scripts/data/NOMIS_API_KEY.txt
+scripts/scp/NOMIS_API_KEY.txt
 # azure secrets
 config.py
