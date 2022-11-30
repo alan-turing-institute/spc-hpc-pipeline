@@ -16,15 +16,17 @@ import os
 import sys
 import time
 import argparse
+from os.path import basename
 
 import config
 import pandas as pd
 
 import connection as conn
+import helpers
 
+REQUIRED_FILES = ["script", "ssm_h_current", "ssm_current", "ass_current", "NOMIS_API_KEY"]
 
-if __name__ == '__main__':
-
+def get_and_handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--upload_files", help="Path to files to be uploaded to batch container and used to run the script.", required=True)
     parser.add_argument("--script_file_name", help="Name of bash script to be ran on jobs, should exist in the path provided by '--upload_files' ", required=True)
@@ -37,6 +39,9 @@ if __name__ == '__main__':
     if not args.alist and not args.lads_file:
         raise RuntimeError('Error: Need to provide either a LAD file or a list of LAD names')
 
+    return args
+
+def get_lads_list(args):
     if args.alist:
         lads_list = args.alist
     elif args.lads_file:
@@ -44,61 +49,41 @@ if __name__ == '__main__':
             lads_list = pd.read_csv(args.lads_file)['LAD20CD'].values
         except KeyError:
             raise RuntimeError('Data csv file must have a column named LAD20CD')
+    return lads_list
 
+def get_upload_fp(args):
+    filepaths_to_upload = {f: '' for f in REQUIRED_FILES}
+    filepaths_to_upload[REQUIRED_FILES[0]] = args.script_file_name
+    for root, dirs, files in os.walk(args.upload_files):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            filepaths_to_upload[basename(filepath).split('.')[0]] = (filepath)
+
+    if all([ f=='' for f in filepaths_to_upload.values() ]):
+        return filepaths_to_upload
+    else:
+        raise FileNotFoundError(f"Not all required files have been found in: {filepaths_to_upload}")
+
+if __name__ == '__main__':
+
+    ### Handle setup!
+    args = get_and_handle_args()
+    lads_list = get_lads_list(args)
     start_time = datetime.datetime.now().replace(microsecond=0)
     print(f'Sample start: {start_time}\n')
 
     # Create the blob client, for use in obtaining references to
     # blob storage containers and uploading files to containers.
     blob_service_client = conn.getBlobServiceClient()
-
-    # Use the blob client to create the containers in Azure Storage if they
-    # don't yet exist.
     container_name = conn.create_container(blob_service_client)
 
-    # The collection of data files that are needed to run the tasks.
-    filepaths_to_upload = []
-    for root, dirs, files in os.walk(args.upload_files):
-        for filename in files:
-            filepath = os.path.join(root, filename)
-            filepaths_to_upload.append(filepath)
-
-    # Upload the data files.
+    # Organise files to be uploaded and perform upload
+    filepaths_to_upload = get_upload_fp(args)
     input_files = [
         conn.upload_file_to_container(blob_service_client, container_name, file_path)
-        for file_path in filepaths_to_upload]
+        for file_path in filepaths_to_upload.values()]
 
-    # very hacky, need to change it to a better way...
-    index_script = -1
-    index_ssm_h = -1
-    index_ssm = -1
-    index_ass = -1
-    index_nomis = -1
-
-    for idx, files in enumerate(filepaths_to_upload):
-        file_name = os.path.basename(files)
-        if file_name == args.script_file_name:
-            index_script = idx
-        elif 'ssm_h_current' in file_name:
-            index_ssm_h = idx
-        elif 'ssm_current' in file_name:
-            index_ssm = idx
-        elif 'ass_current' in file_name:
-            index_ass = idx
-        elif 'ass_current' in file_name:
-            index_ass = idx
-        elif 'NOMIS_API_KEY' in file_name:
-            index_nomis = idx
-
-    if index_script == -1:
-        raise RuntimeError('Error: Script to be run is not found in the input path: ' + args.upload_files)
-    if index_ssm_h == -1:
-        raise RuntimeError('Error: ssm_h_current.json file not file in the input path: ' + args.upload_files)
-    if index_ssm == -1:
-        raise RuntimeError('Error: ssm_current.json file not found in the input path: ' + args.upload_files)
-    if index_ass == -1:
-        raise RuntimeError('Error: ass_current.json file not found in the input path: ' + args.upload_files)
-
+   
     # Create a Batch service client. We'll now be interacting with the Batch
     # service in addition to Storage
 
@@ -107,18 +92,18 @@ if __name__ == '__main__':
     try:
         # Create the pool that will contain the compute nodes that will execute the
         # tasks.
-        create_pool(batch_client, config.POOL_ID)
+        conn.create_pool(batch_client, config.POOL_ID)
 
         # Create the job that will run the tasks.
-        create_job(batch_client, config.JOB_ID, config.POOL_ID)
+        conn.create_job(batch_client, config.JOB_ID, config.POOL_ID)
 
         # Add the tasks to the job.
-        add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files[index_ssm],
+        conn.add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files[index_ssm],
                   input_files[index_ssm_h],
                   input_files[index_ass], input_files[index_nomis], container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
-        wait_for_tasks_to_complete(batch_client,
+        conn.wait_for_tasks_to_complete(batch_client,
                                    config.JOB_ID,
                                    datetime.timedelta(minutes=600))
 
@@ -126,7 +111,7 @@ if __name__ == '__main__':
               "specified timeout period.")
 
         # Print the stdout.txt and stderr.txt files for each task to the console
-        print_task_output(batch_client, config.JOB_ID)
+        conn.print_task_output(batch_client, config.JOB_ID)
 
         # Print out some timing info
         end_time = datetime.datetime.now().replace(microsecond=0)
@@ -138,16 +123,16 @@ if __name__ == '__main__':
         input('Press ENTER to exit...')
 
     except batchmodels.BatchErrorException as err:
-        print_batch_exception(err)
+        conn.print_batch_exception(err)
         raise
 
     finally:
       # Clean up storage resources
         print(f'Deleting container [{container_name}]...')
         # Clean up Batch resources (if the user so chooses).
-        if query_yes_no('Delete job?') == 'yes':
+        if helpers.query_yes_no('Delete job?') == 'yes':
             batch_client.job.delete(config.JOB_ID)
 
-        if query_yes_no('Delete pool?') == 'yes':
+        if helpers.query_yes_no('Delete pool?') == 'yes':
             batch_client.pool.delete(config.POOL_ID)
 
