@@ -24,7 +24,8 @@ import pandas as pd
 import connection as conn
 import helpers
 
-REQUIRED_FILES = ["script", "ssm_h_current", "ssm_current", "ass_current", "NOMIS_API_KEY"]
+# ORDER IS KEY HERE! 
+REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "ass_current", "NOMIS_API_KEY"]
 
 def get_and_handle_args():
     parser = argparse.ArgumentParser()
@@ -79,9 +80,9 @@ if __name__ == '__main__':
 
     # Organise files to be uploaded and perform upload
     filepaths_to_upload = get_upload_fp(args)
-    input_files = [
+    input_files = {file_name:
         conn.upload_file_to_container(blob_service_client, container_name, file_path)
-        for file_path in filepaths_to_upload.values()]
+        for file_name, file_path in filepaths_to_upload.items()}
 
    
     # Create a Batch service client. We'll now be interacting with the Batch
@@ -98,9 +99,13 @@ if __name__ == '__main__':
         conn.create_job(batch_client, config.JOB_ID, config.POOL_ID)
 
         # Add the tasks to the job.
-        conn.add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files[index_ssm],
-                  input_files[index_ssm_h],
-                  input_files[index_ass], input_files[index_nomis], container_name, lads_list)
+        conn.add_tasks(batch_client, config.JOB_ID,
+                    input_files[REQUIRED_FILES[0]],
+                    input_files[REQUIRED_FILES[1]],
+                    input_files[REQUIRED_FILES[2]],
+                    input_files[REQUIRED_FILES[3]],
+                    input_files[REQUIRED_FILES[4]],
+                    container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
         conn.wait_for_tasks_to_complete(batch_client,
