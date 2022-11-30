@@ -6,3 +6,4 @@ AH_notes.md
 scripts/scp/NOMIS_API_KEY.txt
 __*
 .vscode/*
+*.DS_Store
