@@ -120,7 +120,6 @@ if __name__ == '__main__':
 
         # Print the stdout.txt and stderr.txt files for each task to the console
         conn.print_task_output(batch_client, config.JOB_ID)
-
         # Print out some timing info
         end_time = datetime.datetime.now().replace(microsecond=0)
         print()
@@ -131,24 +130,7 @@ if __name__ == '__main__':
         # Catching all exceptions as anything will require intervention!
         print(e)
     finally:
-      # Clean up storage resources
-        print(f'Deleting container [{container_name}]...')
-        # Clean up Batch resources (if the user so chooses).
+        conn.handle_post_run_cleanup(DELETE_CONTAINER, DELETE_JOB,
+                                    DELETE_POOL, blob_service_client,
+                                    batch_client, container_name)
 
-        if not DELETE_CONTAINER:
-            if helpers.query_yes_no('Delete container?') == 'yes':
-                blob_service_client.delete_container(container_name)
-        else:
-            blob_service_client.delete_container(container_name)
-
-        if not DELETE_JOB:
-            if helpers.query_yes_no('Delete job?') == 'yes':
-                batch_client.job.delete(config.JOB_ID)
-        else:
-            batch_client.job.delete(config.JOB_ID)
-
-        if not DELETE_POOL:
-            if helpers.query_yes_no('Delete pool?') == 'yes':
-                batch_client.pool.delete(config.POOL_ID)
-        else:
-            batch_client.pool.delete(config.POOL_ID)

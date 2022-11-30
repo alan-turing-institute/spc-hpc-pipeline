@@ -331,3 +331,26 @@ def _read_stream_as_string(stream, encoding) -> str:
         return output.getvalue().decode(encoding)
     finally:
         output.close()
+
+def handle_post_run_cleanup(DELETE_CONTAINER,DELETE_JOB,DELETE_POOL,
+                            blob_service_client, batch_client,
+                            container_name ):
+    # Clean up Batch resources (if the user so chooses)
+    # This could be coded to be cleaner!
+    if not DELETE_CONTAINER:
+        if helpers.query_yes_no('Delete container?') == 'yes':
+            blob_service_client.delete_container(container_name)
+    else:
+        blob_service_client.delete_container(container_name)
+
+    if not DELETE_JOB:
+        if helpers.query_yes_no('Delete job?') == 'yes':
+            batch_client.job.delete(config.JOB_ID)
+    else:
+        batch_client.job.delete(config.JOB_ID)
+
+    if not DELETE_POOL:
+        if helpers.query_yes_no('Delete pool?') == 'yes':
+            batch_client.pool.delete(config.POOL_ID)
+    else:
+        batch_client.pool.delete(config.POOL_ID)
