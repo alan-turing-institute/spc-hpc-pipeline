@@ -2,17 +2,24 @@ from simple_term_menu import TerminalMenu
 
 
 RUNNING = [True]
+JOBS = []
+TASKS = []
+BATCH_CONN = []
+
 def quit():
     RUNNING[0] = False
         
+def report_jobs():
+    pass
+def report_tasks():
+    pass
+def clean():
+    pass
 
 def main():
 
-    def f():
-        pass
-
     options = ["Check job(s)", "Check task(s)", "Clean up completed jobs", "Exit"]
-    option_funcs = {options[0]:f, options[1]:f, options[2]:f, options[3]:quit}
+    option_funcs = {options[0]:report_jobs, options[1]:report_tasks, options[2]:clean, options[3]:quit}
     terminal_menu = TerminalMenu(options)
 
     while(RUNNING[0]):
