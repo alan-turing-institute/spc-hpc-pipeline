@@ -2,3 +2,7 @@
 scripts/data/NOMIS_API_KEY.txt
 # azure secrets
 config.py
+AH_notes.md
+scripts/scp/NOMIS_API_KEY.txt
+__*
+.vscode/*
