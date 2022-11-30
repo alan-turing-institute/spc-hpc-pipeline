@@ -1,6 +1,7 @@
 import datetime
 import time
-import os
+from os.path import basename
+
 import sys
 import io
 
@@ -85,7 +86,7 @@ def upload_file_to_container(blob_storage_service_client: BlobServiceClient,
     :return: A ResourceFile initialized with a SAS URL appropriate for Batch
     tasks.
     """
-    blob_name = os.path.basename(file_path)
+    blob_name = basename(file_path)
     blob_client = blob_storage_service_client.get_blob_client(container_name, blob_name)
 
     print(f'Uploading file {file_path} to container [{container_name}]...')

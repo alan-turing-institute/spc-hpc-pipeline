@@ -59,13 +59,13 @@ def get_lads_list(args):
 
 def get_upload_fp(args):
     filepaths_to_upload = {f: '' for f in REQUIRED_FILES}
-    filepaths_to_upload[REQUIRED_FILES[0]] = args.script_file_name
+    filepaths_to_upload[REQUIRED_FILES[0]] = f"{args.upload_files}/{args.script_file_name}"
     for root, dirs, files in os.walk(args.upload_files):
         for filename in files:
             filepath = os.path.join(root, filename)
-            filepaths_to_upload[basename(filepath).split('.')[0]] = (filepath)
+            filepaths_to_upload[basename(filepath).split('.')[0]] = filepath
 
-    if all([ f=='' for f in filepaths_to_upload.values() ]):
+    if not any([ f=='' for f in filepaths_to_upload.values()]):
         return filepaths_to_upload
     else:
         raise FileNotFoundError(f"Not all required files have been found in: {filepaths_to_upload}")
