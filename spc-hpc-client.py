@@ -26,6 +26,11 @@ import helpers
 
 # ORDER IS KEY HERE! 
 REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "ass_current", "NOMIS_API_KEY"]
+DELETE_CONTAINER = False
+DELETE_JOB = False
+DELETE_POOL = False
+TIMEOUT = 600
+
 
 def get_and_handle_args():
     parser = argparse.ArgumentParser()
@@ -84,10 +89,8 @@ if __name__ == '__main__':
         conn.upload_file_to_container(blob_service_client, container_name, file_path)
         for file_name, file_path in filepaths_to_upload.items()}
 
-   
     # Create a Batch service client. We'll now be interacting with the Batch
     # service in addition to Storage
-
     batch_client = conn.getBatchServiceClient()
 
     try:
@@ -109,11 +112,11 @@ if __name__ == '__main__':
 
         # Pause execution until tasks reach Completed state.
         conn.wait_for_tasks_to_complete(batch_client,
-                                   config.JOB_ID,
-                                   datetime.timedelta(minutes=600))
+                                    config.JOB_ID,
+                                    datetime.timedelta(minutes=TIMEOUT))
 
         print("Success! All tasks reached the 'Completed' state within the "
-              "specified timeout period.")
+                "specified timeout period.")
 
         # Print the stdout.txt and stderr.txt files for each task to the console
         conn.print_task_output(batch_client, config.JOB_ID)
@@ -124,20 +127,28 @@ if __name__ == '__main__':
         print(f'Sample end: {end_time}')
         elapsed_time = end_time - start_time
         print(f'Elapsed time: {elapsed_time}')
-        print()
-        input('Press ENTER to exit...')
-
-    except batchmodels.BatchErrorException as err:
-        conn.print_batch_exception(err)
-        raise
-
+    except Exception as e:
+        # Catching all exceptions as anything will require intervention!
+        print(e)
     finally:
       # Clean up storage resources
         print(f'Deleting container [{container_name}]...')
         # Clean up Batch resources (if the user so chooses).
-        if helpers.query_yes_no('Delete job?') == 'yes':
+
+        if not DELETE_CONTAINER:
+            if helpers.query_yes_no('Delete container?') == 'yes':
+                blob_service_client.delete_container(container_name)
+        else:
+            blob_service_client.delete_container(container_name)
+
+        if not DELETE_JOB:
+            if helpers.query_yes_no('Delete job?') == 'yes':
+                batch_client.job.delete(config.JOB_ID)
+        else:
             batch_client.job.delete(config.JOB_ID)
 
-        if helpers.query_yes_no('Delete pool?') == 'yes':
+        if not DELETE_POOL:
+            if helpers.query_yes_no('Delete pool?') == 'yes':
+                batch_client.pool.delete(config.POOL_ID)
+        else:
             batch_client.pool.delete(config.POOL_ID)
-
