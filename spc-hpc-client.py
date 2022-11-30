@@ -12,7 +12,6 @@ for the Batch and Storage client objects.
 """
 
 import datetime
-import io
 import os
 import sys
 import time
@@ -55,19 +54,9 @@ if __name__ == '__main__':
 
     # Use the blob client to create the containers in Azure Storage if they
     # don't yet exist.
-    container_name = 'scp'  # pylint: disable=invalid-name
-    current_time = time.strftime("%Y-%m-%d_%H-%M-%S")
-    container_name += "__" + current_time
-    container_name = sanitize_container_name(container_name)
-
-    try:
-        blob_service_client.create_container(container_name)
-
-    except ResourceExistsError:
-        pass
+    container_name = conn.create_container(blob_service_client)
 
     # The collection of data files that are needed to run the tasks.
-
     filepaths_to_upload = []
     for root, dirs, files in os.walk(args.upload_files):
         for filename in files:
@@ -76,7 +65,7 @@ if __name__ == '__main__':
 
     # Upload the data files.
     input_files = [
-        upload_file_to_container(blob_service_client, container_name, file_path)
+        conn.upload_file_to_container(blob_service_client, container_name, file_path)
         for file_path in filepaths_to_upload]
 
     # very hacky, need to change it to a better way...

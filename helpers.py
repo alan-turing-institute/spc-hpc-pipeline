@@ -1,3 +1,5 @@
+import re
+
 def query_yes_no(question: str, default: str = "yes") -> str:
     """
     Prompts the user for yes/no input, displaying the specified question text.

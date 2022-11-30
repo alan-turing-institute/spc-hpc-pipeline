@@ -1,4 +1,11 @@
+import datetime
+import time
+import os
+import sys
+import io
+
 import config
+import helpers
 from azure.batch import BatchServiceClient
 from azure.batch.batch_auth import SharedKeyCredentials
 from azure.storage.blob import (
@@ -11,7 +18,8 @@ from azure.storage.blob import (
 from azure.batch import BatchServiceClient
 import azure.batch.models as batchmodels
 from azure.core.exceptions import ResourceExistsError
-import re
+
+
 
 def getBatchServiceClient():
     credentials = SharedKeyCredentials(config.BATCH_ACCOUNT_NAME,
@@ -27,6 +35,24 @@ def getBlobServiceClient():
     )
 
 DEFAULT_ENCODING = "utf-8"
+
+
+def create_container(blob_service_client):
+    """
+    Creates a container in the given blob 
+
+    Returns: string name of container
+    """
+    container_name = 'scp'  # pylint: disable=invalid-name
+    current_time = time.strftime("%Y-%m-%d_%H-%M-%S")
+    container_name += "__" + current_time
+    container_name = helpers.sanitize_container_name(container_name)
+    try:
+        blob_service_client.create_container(container_name)
+    except ResourceExistsError:
+        print(f"Container {container_name} already exists!")   
+        print("Using existing container!")
+    return container_name
 
 
 def print_batch_exception(batch_exception: batchmodels.BatchErrorException):
