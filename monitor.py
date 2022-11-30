@@ -1,16 +1,35 @@
 from simple_term_menu import TerminalMenu
-
+import connection
+import datetime
 
 RUNNING = [True]
 JOBS = []
 TASKS = []
 BATCH_CONN = []
 
+
+def get_conn():
+    if len(BATCH_CONN):
+        return BATCH_CONN[0]
+    print("Connection doesn't exist, making a new one...")
+    BATCH_CONN.append(connection.getBatchServiceClient())
+    return BATCH_CONN[0]
+    
+
 def quit():
     RUNNING[0] = False
         
+def job_to_str(job):
+    return f"---\nJob: {job.id}\nState: {job.state}\nCreated on: {job.creation_time.strftime('%H:%M:%S on %d/%m/%Y')}\nModified on: {job.last_modified.strftime('%H:%M:%S on %d/%m/%Y')}\nCurrent Run time: {str(datetime.datetime.now(datetime.timezone.utc) - job.creation_time)}\n---"
+
 def report_jobs():
-    pass
+    conn = get_conn()
+    jobs = connection.get_all_jobs(conn)
+    for j in jobs:
+        print(job_to_str(j))
+    _=input("Press Enter to return...")
+
+    
 def report_tasks():
     pass
 def clean():
@@ -20,7 +39,7 @@ def main():
 
     options = ["Check job(s)", "Check task(s)", "Clean up completed jobs", "Exit"]
     option_funcs = {options[0]:report_jobs, options[1]:report_tasks, options[2]:clean, options[3]:quit}
-    terminal_menu = TerminalMenu(options)
+    terminal_menu = TerminalMenu(options, clear_screen=True)
 
     while(RUNNING[0]):
         menu_idx = terminal_menu.show()

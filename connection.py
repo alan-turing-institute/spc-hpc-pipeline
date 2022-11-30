@@ -357,10 +357,10 @@ def handle_post_run_cleanup(DELETE_CONTAINER,DELETE_JOB,DELETE_POOL,
         batch_client.pool.delete(config.POOL_ID)
 
 def get_all_jobs(batch_client):
-    return [batch_client.job.list()]
+    return [j for j in batch_client.job.list()]
     
 def get_all_tasks(batch_client, job_id):
-    return [batch_client.task.list(job_id)]
+    return [t for t in batch_client.task.list(job_id)]
 
 def get_task_state(task):
     return task.state
