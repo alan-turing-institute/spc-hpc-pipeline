@@ -122,19 +122,28 @@ scripts/run_microsynth.py $1 OA11
 
 echo 'Moving to run microsimulation'
 cd ..
-mv $2 microsimulation/config/
-mv $3 microsimulation/config/
-mv $4 microsimulation/config/
+mv ssm_current.json microsimulation/config/
+mv ssm_h_current.json microsimulation/config/
+mv ass_current*.json microsimulation/config/
 
 echo 'Step 1'
 cd microsimulation
-scripts/run_ssm.py -c config/$2 $1
+scripts/run_ssm.py -c config/ssm_current.json $1
 
 echo 'Step 2'
-scripts/run_ssm_h.py -c config/$3 $1
+scripts/run_ssm_h.py -c config/ssm_h_current.json $1
 
-echo 'Step 3'
-scripts/run_assignment.py -c config/$4 $1
+echo 'Running assigment for 2012'
+scripts/run_assignment.py -c config/ass_current_2012.json $1
+
+echo 'Running assigment for 2020'
+scripts/run_assignment.py -c config/ass_current_2020.json $1
+
+echo 'Running assigment for 2032'
+scripts/run_assignment.py -c config/ass_current_2032.json $1
+
+echo 'Running assigment for 2039'
+scripts/run_assignment.py -c config/ass_current_2039.json $1
 
 echo 'Done!'
 
