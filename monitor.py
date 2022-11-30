@@ -1,3 +1,4 @@
+from time import sleep
 from simple_term_menu import TerminalMenu
 import connection
 import datetime
@@ -15,6 +16,12 @@ def get_conn():
     BATCH_CONN.append(connection.getBatchServiceClient())
     return BATCH_CONN[0]
     
+def clear_vars():
+    for l in [JOBS, TASKS, BATCH_CONN]:
+        if len(l):
+            l.pop()
+    print("Cleared local data...")
+    sleep(2)
 
 def quit():
     RUNNING[0] = False
@@ -37,8 +44,8 @@ def clean():
 
 def main():
 
-    options = ["Check job(s)", "Check task(s)", "Clean up completed jobs", "Exit"]
-    option_funcs = {options[0]:report_jobs, options[1]:report_tasks, options[2]:clean, options[3]:quit}
+    options = ["Check job(s)", "Check task(s)", "Clean up completed jobs", "Reset local data", "Exit"]
+    option_funcs = {options[0]:report_jobs, options[1]:report_tasks, options[2]:clean, options[3]:clear_vars, options[-1]:quit}
     terminal_menu = TerminalMenu(options, clear_screen=True)
 
     while(RUNNING[0]):
