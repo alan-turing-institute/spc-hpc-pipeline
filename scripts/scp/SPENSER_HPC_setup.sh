@@ -145,6 +145,9 @@ scripts/run_assignment.py -c config/ass_current_2012.json $1
 echo 'Running assigment for 2020'
 scripts/run_assignment.py -c config/ass_current_2020.json $1
 
+echo 'Running assigment for 2022'
+scripts/run_assignment.py -c config/ass_current_2022.json $1
+
 echo 'Running assigment for 2032'
 scripts/run_assignment.py -c config/ass_current_2032.json $1
 
