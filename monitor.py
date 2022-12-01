@@ -29,16 +29,30 @@ def quit():
 def job_to_str(job):
     return f"---\nJob: {job.id}\nState: {job.state}\nCreated on: {job.creation_time.strftime('%H:%M:%S on %d/%m/%Y')}\nModified on: {job.last_modified.strftime('%H:%M:%S on %d/%m/%Y')}\nCurrent Run time: {str(datetime.datetime.now(datetime.timezone.utc) - job.creation_time)}\n---"
 
+def task_to_str(task):
+    return f"---\nJob: {task.id}\nState: {task.state}\nCreated on: {task.creation_time.strftime('%H:%M:%S on %d/%m/%Y')}\nModified on: {task.last_modified.strftime('%H:%M:%S on %d/%m/%Y')}\nCurrent Run time: {str(datetime.datetime.now(datetime.timezone.utc) - task.creation_time)}\n---"
+
+
 def report_jobs():
     conn = get_conn()
-    jobs = connection.get_all_jobs(conn)
-    for j in jobs:
+    if not len(JOBS):
+        JOBS.append(connection.get_all_jobs(conn))
+    for j in JOBS[0]:
         print(job_to_str(j))
     _=input("Press Enter to return...")
 
     
 def report_tasks():
-    pass
+    conn = get_conn()
+    if not len(JOBS):
+        JOBS.append(connection.get_all_jobs(conn))
+    for j in JOBS[0]:
+        print(f"--- JOB: {j.id} ---")
+        TASKS.append( connection.get_all_jobs() )
+        print(job_to_str(j))
+    _=input("Press Enter to return...")
+
+
 def clean():
     pass
 
