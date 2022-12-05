@@ -30,6 +30,6 @@ STORAGE_ACCOUNT_DOMAIN = 'blob.core.windows.net' # Your storage account blob ser
 
 POOL_ID = 'SPCPool'  # Your Pool ID
 POOL_NODE_COUNT = 1  # Pool node count
-POOL_VM_SIZE = 'STANDARD_A1_V2'  # VM Type/Size
+POOL_VM_SIZE = 'STANDARD_A2_V2'  # VM Type/Size
 JOB_ID = 'SPJob'  # Job ID
 STANDARD_OUT_FILE_NAME = 'stdout.txt'  # Standard Output file
