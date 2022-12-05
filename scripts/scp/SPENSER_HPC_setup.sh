@@ -98,9 +98,6 @@ cd ../household_microsynth
 ./setup.py install
 # Make data directory if not already exists
 mkdir -p data/
-cd cache
-unzip Output_Area_blk.zip
-cd ..
 
 echo
 echo -e "\e[31mInstalling microsimulation...\e[0m"
@@ -110,6 +107,19 @@ cd ../microsimulation
 ./setup.py install
 # Make data directory if not already exists
 mkdir -p data/
+
+echo
+echo -e "\e[31mTesting household_microsynth...\e[0m"
+echo -e "\e[31mHave to run tests once first (that will fail) to download the correct zip file,\e[0m"
+echo -e "\e[31mthen we can unzip it and run tests again\e[0m"
+echo
+
+cd ../household_microsynth
+./setup.py test
+cd cache
+unzip Output_Area_blk.zip
+cd ..
+./setup.py test
 
 echo
 echo "SPENSER packages pulled and installed."
@@ -132,6 +142,7 @@ scripts/run_ssm.py -c config/ssm_current.json $1
 
 echo 'Step 2'
 scripts/run_ssm_h.py -c config/ssm_h_current.json $1
+
 
 echo 'Running assigment for 2012'
 scripts/run_assignment.py -c config/ass_current_2012.json $1
