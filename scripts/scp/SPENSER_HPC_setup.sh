@@ -17,13 +17,6 @@ conda init bash
 source ~/.bashrc
 conda activate spc_env
 
-# Check if in conda env
-if [ "$CONDA_DEFAULT_ENV" == "" ]; then
-  echo "Error, no conda env activated"
-  echo "This script will not work unless you are working in a conda environment"
-  echo "Please set this up and retry"
-  exit 1
-fi
 
 # We need this for UKCensusAPI and ukpopulation to work with Scottish census data
 echo

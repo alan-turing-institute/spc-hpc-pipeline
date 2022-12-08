@@ -7,6 +7,7 @@ RUN adduser docker sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER docker
 RUN mkdir -p /home/docker && chown -R docker:docker /home/docker
+RUN chmod 777 /home/docker
 RUN cd /home/docker
 ADD scripts/scp/* /home/docker
 ENTRYPOINT [ "bash", "/home/docker/SPENSER_HPC_setup.sh" ]
