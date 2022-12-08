@@ -11,7 +11,7 @@ sudo apt install -y build-essential manpages-dev zip unzip
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
 bash ~/miniconda.sh -b -p ~/miniconda
 export PATH=~/miniconda/bin:$PATH
-conda update -n base -c defaults conda
+conda update -n base -c defaults conda -y
 conda create -n spc_env -y python=3.9
 conda init bash
 source ~/.bashrc

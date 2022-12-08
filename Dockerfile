@@ -7,9 +7,9 @@ RUN adduser docker sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER docker
 RUN mkdir -p /home/docker && chown -R docker:docker /home/docker
+RUN cd /home/docker
 ADD scripts/scp/* /home/docker
-ENTRYPOINT [ "sh", "/home/docker/SPENSER_HPC_setup.sh" ]
-
+ENTRYPOINT [ "bash", "/home/docker/SPENSER_HPC_setup.sh" ]
 # To run: 
 # docker build -t "dyme-spc:Dockerfile" .
 # docker run -d -t "dyme-spc:Dockerfile"
