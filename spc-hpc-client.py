@@ -29,7 +29,7 @@ REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "ass_current", "NOMI
 DELETE_CONTAINER = False
 DELETE_JOB = False
 DELETE_POOL = False
-TIMEOUT = 600
+TIMEOUT = 60*24
 
 
 def get_and_handle_args():
@@ -104,10 +104,7 @@ if __name__ == '__main__':
         # Add the tasks to the job.
         conn.add_tasks(batch_client, config.JOB_ID,
                     input_files[REQUIRED_FILES[0]],
-                    input_files[REQUIRED_FILES[1]],
-                    input_files[REQUIRED_FILES[2]],
-                    input_files[REQUIRED_FILES[3]],
-                    input_files[REQUIRED_FILES[4]],
+                    input_files,
                     container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
