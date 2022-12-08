@@ -25,7 +25,7 @@ import connection as conn
 import helpers
 
 # ORDER IS KEY HERE! 
-REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "ass_current", "NOMIS_API_KEY"]
+REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "NOMIS_API_KEY"]
 DELETE_CONTAINER = False
 DELETE_JOB = False
 DELETE_POOL = False
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         # Add the tasks to the job.
         conn.add_tasks(batch_client, config.JOB_ID,
                     input_files[REQUIRED_FILES[0]],
-                    input_files,
+                    list(input_files.values()),
                     container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
