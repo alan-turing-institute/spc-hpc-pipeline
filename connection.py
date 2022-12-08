@@ -20,7 +20,7 @@ from azure.batch import BatchServiceClient
 import azure.batch.models as batchmodels
 from azure.core.exceptions import ResourceExistsError
 
-
+DEFAULT_ENCODING = "utf-8"
 
 def getBatchServiceClient():
     credentials = SharedKeyCredentials(config.BATCH_ACCOUNT_NAME,
@@ -34,9 +34,6 @@ def getBlobServiceClient():
         account_url=f"https://{config.STORAGE_ACCOUNT_NAME}.{config.STORAGE_ACCOUNT_DOMAIN}/",
         credential=config.STORAGE_ACCOUNT_KEY
     )
-
-DEFAULT_ENCODING = "utf-8"
-
 
 def create_container(blob_service_client):
     """
@@ -180,8 +177,7 @@ def create_job(batch_service_client: BatchServiceClient, job_id: str, pool_id: s
     batch_service_client.job.add(job)
 
 
-def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_script_file: str, config_ssm: str,
-              config_ssm_h: str, config_ass: str, nomis_file: str,
+def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_script_file: str, input_files: list,
               input_container_name: str, LAD_tasks):
     """
     Adds a task for each input file in the collection to the specified job.
@@ -189,10 +185,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
     :param batch_service_client:  A Batch service client.
     :param job_id:  The ID of the job to which to add the tasks.
     :param input_script_file: Input script file to be ran on command.
-    :param config_ssm: Script configuration file 1
-    :param config_ssm_h: Script configuration file 2
-    :param config_ass: Script configuration file 3
-    :param nomis_file: Nomis API key
+    :param input_files: Files needed to be transfered to run job
     :param input_container_name: The name of the Azure Blob storage container.
     :param LAD_tasks: A collection of inputs to be run as arguments to script. One task will be created for each argument file.
 
@@ -203,8 +196,8 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
     tasks = []
 
     for idx, lad in enumerate(LAD_tasks):
-        command = "/bin/bash {} {} {} {} {}".format(
-            input_script_file.file_path, lad, config_ssm.file_path, config_ssm_h.file_path, config_ass.file_path
+        command = "/bin/bash {} {} ".format(
+            input_script_file.file_path, lad
         )
 
         output_file_path = f"*/data/*{lad}*.csv"
@@ -214,7 +207,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
             input_container_name,
             account_key=config.STORAGE_ACCOUNT_KEY,
             permission=BlobSasPermissions(read=True, write=True),
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=10)
+            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         )
 
         container_sas_url = "https://{}.blob.core.windows.net/{}?{}".format(
@@ -230,7 +223,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
         tasks.append(batchmodels.TaskAddParameter(
             id=f'Task{idx}_{lad}',
             command_line=command,
-            resource_files=[input_script_file, config_ssm, config_ssm_h, config_ass, nomis_file],
+            resource_files=input_files,
             user_identity=user,
             output_files=[batchmodels.OutputFile(
                 file_pattern=output_file_path,
