@@ -62,6 +62,8 @@ def get_upload_fp(args):
     filepaths_to_upload[REQUIRED_FILES[0]] = f"{args.upload_files}/{args.script_file_name}"
     for root, dirs, files in os.walk(args.upload_files):
         for filename in files:
+            if ".sh" in filename:
+                continue
             filepath = os.path.join(root, filename)
             filepaths_to_upload[basename(filepath).split('.')[0]] = filepath
 
