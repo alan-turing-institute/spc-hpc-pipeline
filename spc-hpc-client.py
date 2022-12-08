@@ -211,8 +211,7 @@ def create_job(batch_service_client: BatchServiceClient, job_id: str, pool_id: s
     batch_service_client.job.add(job)
 
 
-def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_script_file: str, config_ssm: str,
-              config_ssm_h: str, config_ass: str, nomis_file: str,
+def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_script_file: str, input_files: list,
               input_container_name: str, LAD_tasks):
     """
     Adds a task for each input file in the collection to the specified job.
@@ -220,11 +219,8 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
     :param batch_service_client:  A Batch service client.
     :param job_id:  The ID of the job to which to add the tasks.
     :param input_script_file: Input script file to be ran on command.
-    :param config_ssm: Script configuration file 1
-    :param config_ssm_h: Script configuration file 2
-    :param config_ass: Script configuration file 3
-    :param nomis_file: Nomis API key
-    :param input_container_name: The name of the Azure Blob storage container.
+    :param input_script_file: Input script file to be ran on command.
+    :param input_files: List of resource files to uploaded in the container and that are needed to run the tasks.
     :param LAD_tasks: A collection of inputs to be run as arguments to script. One task will be created for each argument file.
 
     """
@@ -234,8 +230,8 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
     tasks = []
 
     for idx, lad in enumerate(LAD_tasks):
-        command = "/bin/bash {} {} {} {} {}".format(
-            input_script_file.file_path, lad, config_ssm.file_path, config_ssm_h.file_path, config_ass.file_path
+        command = "/bin/bash {} {}".format(
+            input_script_file.file_path, lad
         )
 
         output_file_path = f"*/data/*{lad}*.csv"
@@ -245,7 +241,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
             input_container_name,
             account_key=config.STORAGE_ACCOUNT_KEY,
             permission=BlobSasPermissions(read=True, write=True),
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=10)
+            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         )
 
         container_sas_url = "https://{}.blob.core.windows.net/{}?{}".format(
@@ -261,7 +257,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
         tasks.append(batchmodels.TaskAddParameter(
             id=f'Task{idx}_{lad}',
             command_line=command,
-            resource_files=[input_script_file, config_ssm, config_ssm_h, config_ass, nomis_file],
+            resource_files=input_files,
             user_identity=user,
             output_files=[batchmodels.OutputFile(
                 file_pattern=output_file_path,
@@ -453,7 +449,7 @@ if __name__ == '__main__':
     if index_ssm == -1:
         raise RuntimeError('Error: ssm_current.json file not found in the input path: ' + args.upload_files)
     if index_ass == -1:
-        raise RuntimeError('Error: ass_current.json file not found in the input path: ' + args.upload_files)
+        raise RuntimeError('Error: ass_current_YEAR.json file not found in the input path: ' + args.upload_files)
 
     # Create a Batch service client. We'll now be interacting with the Batch
     # service in addition to Storage
@@ -473,14 +469,12 @@ if __name__ == '__main__':
         create_job(batch_client, config.JOB_ID, config.POOL_ID)
 
         # Add the tasks to the job.
-        add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files[index_ssm],
-                  input_files[index_ssm_h],
-                  input_files[index_ass], input_files[index_nomis], container_name, lads_list)
+        add_tasks(batch_client, config.JOB_ID, input_files[index_script], input_files, container_name, lads_list)
 
         # Pause execution until tasks reach Completed state.
         wait_for_tasks_to_complete(batch_client,
                                    config.JOB_ID,
-                                   datetime.timedelta(minutes=600))
+                                   datetime.timedelta(hours=24))
 
         print("Success! All tasks reached the 'Completed' state within the "
               "specified timeout period.")
