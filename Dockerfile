@@ -1,8 +1,15 @@
 FROM --platform=linux/amd64 ubuntu:20.04 
-ADD scripts/scp/* ~/
 RUN apt-get -y update
 RUN apt-get -y upgrade
 RUN apt-get install -y build-essential manpages-dev zip unzip git wget sudo 
-RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+RUN adduser --disabled-password --gecos '' docker
+RUN adduser docker sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER docker
-ENTRYPOINT [ "sh", "/SPENSER_HPC_setup.sh" ]
+RUN mkdir -p /home/docker && chown -R docker:docker /home/docker
+ADD scripts/scp/* /home/docker
+ENTRYPOINT [ "sh", "/home/docker/SPENSER_HPC_setup.sh" ]
+
+# To run: 
+# docker build -t "dyme-spc:Dockerfile" .
+# docker run -d -t "dyme-spc:Dockerfile"
