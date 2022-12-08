@@ -112,24 +112,28 @@ LAD.
 The execution of a single Task on a batch node (which is an Ubuntu-X.X VM) is governed by this shell script `SPENSER_HPC_setup.sh`. Which has the input arguments:
 
 1. The LAD to be simulated.
-2. A configuration file for the household_microsimulation step.
-3. A configuration file for the microsimulation time dependent step.
-4. A configuration file for the microsimulation assigment step.
 
 For this pipeline the command ran on a given task is the following:
 
-``/bin/bash SPENSER_HPC_setup.sh E06000001 ssm_current.json ssm_h_current.json ass_current.json``
+``/bin/bash SPENSER_HPC_setup.sh E06000001``
 
 The basic flow of the SPENSER_HPC_setup.sh script is:
 * Install some packages, including miniconda, and create and activate a Python 3.9 conda environment.
 * Clone the following repos: `UKCensusAPI`, `ukpopulation`, `humanleague`, `household_microsynth` and `microsimulation`.
 * Install each of these packages from source as recommended in their repo.
-* Move the uploaded config files to the `microsimulation/config` directory.
+* Move the following uploaded config files to the `microsimulation/config` directory.
+  * A configuration file for the household_microsimulation step. (`ssm_current.json`)
+  * A configuration file for the microsimulation time dependent step. (`ssm_h_current.json`)
+  * Several configuration file for the microsimulation assigment step (`ass_current_year.json` for years 2012, 2020, 2022, 2032, 2039).
 * Run the command following commands:
   * ```scripts/run_microsynth.py E06000001 OA11``` from the household_microsynth directory.
   * ```scripts/run_ssm.py.py -c config/ssm_current.json E06000001``` from the microsimulation directory.
   * ```scripts/run_ssm_h.py.py -c config/ssm_h_current.json E06000001``` from the microsimulation directory.
-  * ```scripts/run_assignment.py -c config/ass_current.json E06000001``` from the microsimulation directory.
+  * ```scripts/run_assignment.py -c config/ass_current_2012.json E06000001``` from the microsimulation directory.
+  * ```scripts/run_assignment.py -c config/ass_current_2020.json E06000001``` from the microsimulation directory.
+  * ```scripts/run_assignment.py -c config/ass_current_2022.json E06000001``` from the microsimulation directory.
+  * ```scripts/run_assignment.py -c config/ass_current_2032.json E06000001``` from the microsimulation directory.
+  * ```scripts/run_assignment.py -c config/ass_current_2039.json E06000001``` from the microsimulation directory.
 
 ### What happens when all tasks are submitted?
 

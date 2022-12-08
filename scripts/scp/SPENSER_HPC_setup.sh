@@ -44,7 +44,7 @@ git clone https://github.com/virgesmith/humanleague.git
 
 git clone -b arc --single-branch https://github.com/nismod/household_microsynth.git
 
-git clone -b arc --single-branch https://github.com/nismod/microsimulation.git
+git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
 
 export API_KEY=`cat NOMIS_API_KEY.txt`
 
@@ -104,9 +104,6 @@ cd ../household_microsynth
 ./setup.py install
 # Make data directory if not already exists
 mkdir -p data/
-cd cache
-unzip Output_Area_blk.zip
-cd ..
 
 echo
 echo -e "\e[31mInstalling microsimulation...\e[0m"
@@ -116,6 +113,19 @@ cd ../microsimulation
 ./setup.py install
 # Make data directory if not already exists
 mkdir -p data/
+
+echo
+echo -e "\e[31mTesting household_microsynth...\e[0m"
+echo -e "\e[31mHave to run tests once first (that will fail) to download the correct zip file,\e[0m"
+echo -e "\e[31mthen we can unzip it and run tests again\e[0m"
+echo
+
+cd ../household_microsynth
+./setup.py test
+cd cache
+unzip Output_Area_blk.zip
+cd ..
+./setup.py test
 
 echo
 echo "SPENSER packages pulled and installed."
@@ -128,24 +138,32 @@ scripts/run_microsynth.py $1 OA11
 
 echo 'Moving to run microsimulation'
 cd ..
-mv $2 microsimulation/config/
-mv $3 microsimulation/config/
-mv $4 microsimulation/config/
-
-cat $3
+mv ssm_current.json microsimulation/config/
+mv ssm_h_current.json microsimulation/config/
+mv ass_current*.json microsimulation/config/
 
 echo 'Step 1'
 cd microsimulation
-scripts/run_ssm.py -c config/$2 $1
+scripts/run_ssm.py -c config/ssm_current.json $1
 
 echo 'Step 2'
-scripts/run_ssm_h.py -c config/$3 $1
+scripts/run_ssm_h.py -c config/ssm_h_current.json $1
 
-echo 'Step 2, running again because reasons'
-scripts/run_ssm_h.py -c config/$3 $1
 
-echo 'Step 3'
-scripts/run_assignment.py -c config/$4 $1
+echo 'Running assigment for 2012'
+scripts/run_assignment.py -c config/ass_current_2012.json $1
+
+echo 'Running assigment for 2020'
+scripts/run_assignment.py -c config/ass_current_2020.json $1
+
+echo 'Running assigment for 2022'
+scripts/run_assignment.py -c config/ass_current_2022.json $1
+
+echo 'Running assigment for 2032'
+scripts/run_assignment.py -c config/ass_current_2032.json $1
+
+echo 'Running assigment for 2039'
+scripts/run_assignment.py -c config/ass_current_2039.json $1
 
 echo 'Done!'
 
