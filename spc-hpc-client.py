@@ -241,7 +241,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
             input_container_name,
             account_key=config.STORAGE_ACCOUNT_KEY,
             permission=BlobSasPermissions(read=True, write=True),
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=48)
         )
 
         container_sas_url = "https://{}.blob.core.windows.net/{}?{}".format(
@@ -474,7 +474,7 @@ if __name__ == '__main__':
         # Pause execution until tasks reach Completed state.
         wait_for_tasks_to_complete(batch_client,
                                    config.JOB_ID,
-                                   datetime.timedelta(hours=24))
+                                   datetime.timedelta(hours=48))
 
         print("Success! All tasks reached the 'Completed' state within the "
               "specified timeout period.")
