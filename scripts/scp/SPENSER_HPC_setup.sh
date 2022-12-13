@@ -12,10 +12,11 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/
 bash ~/miniconda.sh -b -p ~/miniconda
 export PATH=~/miniconda/bin:$PATH
 conda update -n base -c defaults conda -y
-conda create -n spc_env -y python=3.9
+conda install python=3.9 pip -y
+#conda create -n spc_env -y python=3.9
 conda init bash
 source ~/.bashrc
-conda activate spc_env
+#conda activate spc_env
 
 
 # We need this for UKCensusAPI and ukpopulation to work with Scottish census data
@@ -144,4 +145,3 @@ echo 'Done!'
 
 now=$(date +"%T")
 echo "Current time : $now"
-
