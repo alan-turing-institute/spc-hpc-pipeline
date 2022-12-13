@@ -1,5 +1,6 @@
 FROM --platform=linux/amd64 ubuntu:20.04 
 SHELL ["/bin/bash", "-c"]
+VOLUME /home/docker
 RUN apt-get -y update
 RUN apt-get -y upgrade
 RUN apt-get install -y build-essential manpages-dev zip unzip git wget sudo 
