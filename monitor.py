@@ -30,7 +30,7 @@ def job_to_str(job):
     return f"---\nJob: {job.id}\nState: {job.state}\nCreated on: {job.creation_time.strftime('%H:%M:%S on %d/%m/%Y')}\nModified on: {job.last_modified.strftime('%H:%M:%S on %d/%m/%Y')}\nCurrent Run time: {str(datetime.datetime.now(datetime.timezone.utc) - job.creation_time)}\n---"
 
 def task_to_str(task):
-    return f"---\nJob: {task.id}\nState: {task.state}\nCreated on: {task.creation_time.strftime('%H:%M:%S on %d/%m/%Y')}\nModified on: {task.last_modified.strftime('%H:%M:%S on %d/%m/%Y')}\nCurrent Run time: {str(datetime.datetime.now(datetime.timezone.utc) - task.creation_time)}\n---"
+    return f"\tJob: {task.id}\n\tState: {task.state}\n\tCreated on: {task.creation_time.strftime('%H:%M:%S on %d/%m/%Y')}\n\tModified on: {task.last_modified.strftime('%H:%M:%S on %d/%m/%Y')}\n\tCurrent Run time: {str(datetime.datetime.now(datetime.timezone.utc) - task.creation_time)}\n\t---"
 
 
 def report_jobs():
@@ -48,13 +48,28 @@ def report_tasks():
         JOBS.append(connection.get_all_jobs(conn))
     for j in JOBS[0]:
         print(f"--- JOB: {j.id} ---")
-        TASKS.append( connection.get_all_jobs() )
+        TASKS.append( connection.get_all_tasks(conn, j.id) )
         print(job_to_str(j))
+        for t in TASKS[0]:
+            print(task_to_str(t))
     _=input("Press Enter to return...")
 
 
 def clean():
-    pass
+    conn = get_conn()
+    if not len(JOBS):
+        JOBS.append(connection.get_all_jobs(conn))
+    for j in JOBS[0]:
+        print(f"--- JOB: {j.id} ---")
+        kill_job = str(input("Clean/Kill this job and pool [Y]es [N]o\n")).upper()
+        while kill_job not in ['Y', 'N']:
+            kill_job = str(input("Clean/Kill this job and pool [Y]es [N]o\n")).upper()
+        if kill_job == 'Y':
+            connection.handle_post_run_cleanup(None, True, True, None, conn, j.id)
+
+
+
+    _=input("Press Enter to return...")
 
 def main():
 

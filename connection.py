@@ -328,26 +328,30 @@ def _read_stream_as_string(stream, encoding) -> str:
 
 def handle_post_run_cleanup(DELETE_CONTAINER,DELETE_JOB,DELETE_POOL,
                             blob_service_client, batch_client,
-                            container_name ):
+                            container_name, job_id=None, pool_id=None ):
     # Clean up Batch resources (if the user so chooses)
     # This could be coded to be cleaner!
-    if not DELETE_CONTAINER:
-        if helpers.query_yes_no('Delete container?') == 'yes':
-            blob_service_client.delete_container(container_name)
-    else:
-        blob_service_client.delete_container(container_name)
+    job_id = config.JOB_ID if job_id is None else job_id
+    pool_id = config.POOL_ID if pool_id is None else pool_id
+    # if not DELETE_CONTAINER:
+    #     if helpers.query_yes_no('Delete container?') == 'yes':
+    #         blob_service_client.delete_container(container_name)
+    # else:
+    #     blob_service_client.delete_container(container_name)
 
     if not DELETE_JOB:
         if helpers.query_yes_no('Delete job?') == 'yes':
-            batch_client.job.delete(config.JOB_ID)
+            batch_client.job.delete(job_id)
     else:
-        batch_client.job.delete(config.JOB_ID)
+        batch_client.job.delete(job_id)
 
     if not DELETE_POOL:
         if helpers.query_yes_no('Delete pool?') == 'yes':
-            batch_client.pool.delete(config.POOL_ID)
+            batch_client.pool.delete(pool_id)
     else:
-        batch_client.pool.delete(config.POOL_ID)
+        batch_client.pool.delete(pool_id)
+
+
 
 def get_all_jobs(batch_client):
     return [j for j in batch_client.job.list()]
