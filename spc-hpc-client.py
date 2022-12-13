@@ -13,8 +13,6 @@ for the Batch and Storage client objects.
 
 import datetime
 import os
-import sys
-import time
 import argparse
 from os.path import basename
 
