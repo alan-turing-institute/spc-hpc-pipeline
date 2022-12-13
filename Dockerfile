@@ -1,4 +1,5 @@
 FROM --platform=linux/amd64 ubuntu:20.04 
+SHELL ["/bin/bash", "-c"]
 RUN apt-get -y update
 RUN apt-get -y upgrade
 RUN apt-get install -y build-essential manpages-dev zip unzip git wget sudo 
@@ -12,6 +13,7 @@ RUN cd /home/docker
 ADD scripts/scp/* /home/docker
 WORKDIR /home/docker/
 ENTRYPOINT [ "bash", "/home/docker/SPENSER_HPC_setup.sh" ]
+#ENTRYPOINT ["tail", "-f", "/dev/null"]
 # To run: 
 # docker build -t "dyme-spc:Dockerfile" .
 # docker run -d -t "dyme-spc:Dockerfile"
