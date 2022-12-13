@@ -58,7 +58,7 @@ touch household_microsynth/cache/NOMIS_API_KEY
 echo $API_KEY > household_microsynth/cache/NOMIS_API_KEY
 
 mkdir -p microsimulation/cache/
-touch microsimulation/cache/NOMIS_API_KEY
+touch microsimulation/cache/NOMIS_API_KEY 
 echo $API_KEY > microsimulation/cache/NOMIS_API_KEY
 
 # Now create apikey.sh script for batch runs, and write in NOMIS_API_KEY
