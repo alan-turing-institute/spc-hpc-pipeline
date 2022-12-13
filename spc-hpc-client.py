@@ -13,8 +13,6 @@ for the Batch and Storage client objects.
 
 import datetime
 import os
-import sys
-import time
 import argparse
 from os.path import basename
 
@@ -22,8 +20,6 @@ import config
 import pandas as pd
 
 import connection as conn
-import helpers
-
 
 # ORDER IS KEY HERE! 
 REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "NOMIS_API_KEY"]
