@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 ubuntu:20.04 
+FROM ubuntu:20.04 
 SHELL ["/bin/bash", "-c"]
 VOLUME /home/docker
 RUN apt-get -y update
@@ -12,9 +12,10 @@ RUN mkdir -p /home/docker
 RUN chmod 777 /home/docker
 RUN cd /home/docker
 ADD scripts/scp/* /home/docker
+ADD data/* /home/docker
+RUN sed -i 's/x86_64/aarch64/' /home/docker/SPENSER_HPC_setup.sh  
 WORKDIR /home/docker/
-ENTRYPOINT [ "bash", "/home/docker/SPENSER_HPC_setup.sh" ]
-#ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT [ "bash", "/home/docker/SPENSER_HPC_setup.sh", "W06000019"]
 # To run: 
 # docker build -t "dyme-spc:Dockerfile" .
 # docker run -d -t "dyme-spc:Dockerfile"
