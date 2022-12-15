@@ -7,23 +7,19 @@ echo "Current time : $now"
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
 
-# install and setup miniconda
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
-bash ~/miniconda.sh -b -p ~/miniconda
+if [! -d "~/miniconda"]
+then
+  # install and setup miniconda
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+  bash ~/miniconda.sh -b -p ~/miniconda
+fi
+
 export PATH=~/miniconda/bin:$PATH
-conda update -n base -c defaults conda
-conda create -n spc_env -y python=3.9
+conda update -n base -c defaults conda -y
+conda install python=3.9 pip -y
+conda install cython -y 
 conda init bash
 source ~/.bashrc
-conda activate spc_env
-
-# Check if in conda env
-if [ "$CONDA_DEFAULT_ENV" == "" ]; then
-  echo "Error, no conda env activated"
-  echo "This script will not work unless you are working in a conda environment"
-  echo "Please set this up and retry"
-  exit 1
-fi
 
 # We need this for UKCensusAPI and ukpopulation to work with Scottish census data
 echo
@@ -36,13 +32,13 @@ echo
 
 echo -e "\e[31mDownloading all SPENSER repo's from github and installing...\e[0m"
 
-git clone -b master --single-branch https://github.com/ld-archer/UKCensusAPI.git
+git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI
 
 git clone -b master --single-branch https://github.com/ld-archer/ukpopulation.git
 
 git clone https://github.com/virgesmith/humanleague.git
 
-git clone -b arc --single-branch https://github.com/nismod/household_microsynth.git
+git clone -b fix/NoneType --single-branch https://github.com/alan-turing-institute/household_microsynth/
 
 git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
 
@@ -116,17 +112,10 @@ mkdir -p data/
 
 echo
 echo -e "\e[31mTesting household_microsynth...\e[0m"
-echo -e "\e[31mHave to run tests once first (that will fail) to download the correct zip file,\e[0m"
-echo -e "\e[31mthen we can unzip it and run tests again\e[0m"
 echo
 
 cd ../household_microsynth
 ./setup.py test
-cd cache
-unzip Output_Area_blk.zip
-cd ..
-./setup.py test
-
 echo
 echo "SPENSER packages pulled and installed."
 
