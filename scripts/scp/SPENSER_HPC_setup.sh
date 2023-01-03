@@ -13,6 +13,7 @@ bash ~/miniconda.sh -b -p ~/miniconda
 export PATH=~/miniconda/bin:$PATH
 conda update -n base -c defaults conda -y
 conda install python=3.9 pip -y
+conda install cython -y 
 #conda create -n spc_env -y python=3.9
 conda init bash
 source ~/.bashrc
@@ -30,7 +31,7 @@ echo
 
 echo -e "\e[31mDownloading all SPENSER repo's from github and installing...\e[0m"
 
-git clone -b master --single-branch https://github.com/ld-archer/UKCensusAPI.git
+git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI.git
 
 git clone -b master --single-branch https://github.com/ld-archer/ukpopulation.git
 
@@ -110,15 +111,9 @@ mkdir -p data/
 
 echo
 echo -e "\e[31mTesting household_microsynth...\e[0m"
-echo -e "\e[31mHave to run tests once first (that will fail) to download the correct zip file,\e[0m"
-echo -e "\e[31mthen we can unzip it and run tests again\e[0m"
 echo
 
 cd ../household_microsynth
-./setup.py test
-cd cache
-unzip Output_Area_blk.zip
-cd ..
 ./setup.py test
 
 echo

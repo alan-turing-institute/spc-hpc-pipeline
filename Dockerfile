@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 
+FROM --platform=linux/arm64 ubuntu:20.04 
 SHELL ["/bin/bash", "-c"]
 VOLUME /home/docker
 RUN apt-get -y update
@@ -13,9 +13,12 @@ RUN chmod 777 /home/docker
 RUN cd /home/docker
 ADD scripts/scp/* /home/docker
 ADD data/* /home/docker
-RUN sed -i 's/x86_64/aarch64/' /home/docker/SPENSER_HPC_setup.sh  
 WORKDIR /home/docker/
-ENTRYPOINT [ "bash", "/home/docker/SPENSER_HPC_setup.sh", "W06000019"]
+# Comment out nextline if running on a non-arm system
+RUN sed -i 's/x86_64/aarch64/' /home/docker/SPENSER_HPC_setup.sh  
+ENTRYPOINT ["tail", "-f", "/dev/null"]
 # To run: 
 # docker build -t "dyme-spc:Dockerfile" .
 # docker run -d -t "dyme-spc:Dockerfile"
+# 
+# ./SPENSER_HPC_setup.sh `awk -F "\"*,\"*" '{print substr($1,2)}' new_lad_list_Wales.csv | awk 'NR!=1 {print}'`
