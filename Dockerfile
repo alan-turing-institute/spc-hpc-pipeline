@@ -16,9 +16,11 @@ ADD data/* /home/docker
 WORKDIR /home/docker/
 # Comment out nextline if running on a non-arm system
 RUN sed -i 's/x86_64/aarch64/' /home/docker/SPENSER_HPC_setup.sh  
+RUN chmod +x /home/docker/SPENSER_HPC_setup.sh
 ENTRYPOINT ["tail", "-f", "/dev/null"]
-# To run: 
+
+# To run all Wales LADs for example: 
+
 # docker build -t "dyme-spc:Dockerfile" .
-# docker run -d -t "dyme-spc:Dockerfile"
-# 
-# bash ./SPENSER_HPC_setup.sh `awk -F "\"*,\"*" '{print substr($1,2)}' new_lad_list_Wales.csv | awk 'NR!=1 {print}'`
+# docker run --name dyme -d -t "dyme-spc:Dockerfile"
+# docker exec -it dyme bash ./SPENSER_HPC_setup.sh `awk -F "\"*,\"*" '{print substr($1,2)}' new_lad_list_Wales.csv | awk 'NR!=1 {print}'`

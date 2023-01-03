@@ -7,16 +7,19 @@ echo "Current time : $now"
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
 
-# install and setup miniconda
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
-chmod +x miniconda.sh 
-bash ./miniconda.sh -b -p ~/miniconda
-export PATH=~/miniconda/bin:$PATH
-conda update -n base -c defaults conda -y
-conda install python=3.9 pip -y
-conda install cython -y 
-conda init bash
-source ~/.bashrc
+if ! command -v conda &> /dev/null
+then
+    # install and setup miniconda
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+    chmod +x miniconda.sh 
+    bash ./miniconda.sh -b -p ~/miniconda
+    export PATH=~/miniconda/bin:$PATH
+    conda update -n base -c defaults conda -y
+    conda install python=3.9 pip -y
+    conda install cython -y 
+    conda init bash
+    source ~/.bashrc
+fi
 
 
 # We need this for UKCensusAPI and ukpopulation to work with Scottish census data
@@ -30,15 +33,30 @@ echo
 
 echo -e "\e[31mDownloading all SPENSER repo's from github and installing...\e[0m"
 
-git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI.git
+if [ ! -d UKCensusAPI ]
+then   
+    git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI.git
+fi
 
-git clone -b master --single-branch https://github.com/ld-archer/ukpopulation.git
+if [ ! -d ukpopulation ]
+then   
+    git clone -b master --single-branch https://github.com/ld-archer/ukpopulation.git
+fi
 
-git clone https://github.com/virgesmith/humanleague.git
+if [ ! -d UKCehumanleaguensusAPI ]
+then   
+    git clone https://github.com/virgesmith/humanleague.git
+fi 
 
-git clone -b fix/NoneType --single-branch https://github.com/alan-turing-institute/household_microsynth.git
+if [ ! -d household_microsynth ]
+then   
+    git clone -b fix/NoneType --single-branch https://github.com/alan-turing-institute/household_microsynth.git
+fi 
 
-git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
+if [ ! -d microsimulation ]
+then   
+    git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
+fi 
 
 export API_KEY=`cat NOMIS_API_KEY.txt`
 
@@ -118,42 +136,47 @@ cd ../household_microsynth
 echo
 echo "SPENSER packages pulled and installed."
 
+echo "Starting to run, if mulltiple LADs given these will be executed in sequence..."
 
-# Have to run household_microsynth for LAD to produce data for
-# microsimulation tests to pass
-cd ../household_microsynth
-scripts/run_microsynth.py $1 OA11
+for var in "$@"
+do
+    
+    # Have to run household_microsynth for LAD to produce data for
+    # microsimulation tests to pass
+    cd ../household_microsynth
+    scripts/run_microsynth.py $var OA11
 
-echo 'Moving to run microsimulation'
-cd ..
-mv ssm_current.json microsimulation/config/
-mv ssm_h_current.json microsimulation/config/
-mv ass_current*.json microsimulation/config/
+    echo 'Moving to run microsimulation'
+    cd ..
+    mv ssm_current.json microsimulation/config/
+    mv ssm_h_current.json microsimulation/config/
+    mv ass_current*.json microsimulation/config/
 
-echo 'Step 1'
-cd microsimulation
-scripts/run_ssm.py -c config/ssm_current.json $1
+    echo 'Step 1'
+    cd microsimulation
+    scripts/run_ssm.py -c config/ssm_current.json $var
 
-echo 'Step 2'
-scripts/run_ssm_h.py -c config/ssm_h_current.json $1
+    echo 'Step 2'
+    scripts/run_ssm_h.py -c config/ssm_h_current.json $var
 
+    echo 'Running assigment for 2012'
+    scripts/run_assignment.py -c config/ass_current_2012.json $var
 
-echo 'Running assigment for 2012'
-scripts/run_assignment.py -c config/ass_current_2012.json $1
+    echo 'Running assigment for 2020'
+    scripts/run_assignment.py -c config/ass_current_2020.json $var
 
-echo 'Running assigment for 2020'
-scripts/run_assignment.py -c config/ass_current_2020.json $1
+    echo 'Running assigment for 2022'
+    scripts/run_assignment.py -c config/ass_current_2022.json $var
 
-echo 'Running assigment for 2022'
-scripts/run_assignment.py -c config/ass_current_2022.json $1
+    echo 'Running assigment for 2032'
+    scripts/run_assignment.py -c config/ass_current_2032.json $var
 
-echo 'Running assigment for 2032'
-scripts/run_assignment.py -c config/ass_current_2032.json $1
+    echo 'Running assigment for 2039'
+    scripts/run_assignment.py -c config/ass_current_2039.json $var
 
-echo 'Running assigment for 2039'
-scripts/run_assignment.py -c config/ass_current_2039.json $1
+    echo "Done with: $var"
 
-echo 'Done!'
+    now=$(date +"%T")
+    echo "Current time : $now"
 
-now=$(date +"%T")
-echo "Current time : $now"
+done
