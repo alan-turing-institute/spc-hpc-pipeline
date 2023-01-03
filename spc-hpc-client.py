@@ -20,6 +20,7 @@ import config
 import pandas as pd
 
 import connection as conn
+import helpers
 
 # ORDER IS KEY HERE! 
 REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "NOMIS_API_KEY"]

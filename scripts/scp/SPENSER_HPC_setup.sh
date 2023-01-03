@@ -7,19 +7,17 @@ echo "Current time : $now"
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
 
-if [! -d "~/miniconda"]
-then
-  # install and setup miniconda
-  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
-  bash ~/miniconda.sh -b -p ~/miniconda
-fi
-
+# install and setup miniconda
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+chmod +x miniconda.sh 
+bash ./miniconda.sh -b -p ~/miniconda
 export PATH=~/miniconda/bin:$PATH
 conda update -n base -c defaults conda -y
 conda install python=3.9 pip -y
 conda install cython -y 
 conda init bash
 source ~/.bashrc
+
 
 # We need this for UKCensusAPI and ukpopulation to work with Scottish census data
 echo
@@ -32,13 +30,13 @@ echo
 
 echo -e "\e[31mDownloading all SPENSER repo's from github and installing...\e[0m"
 
-git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI
+git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI.git
 
 git clone -b master --single-branch https://github.com/ld-archer/ukpopulation.git
 
 git clone https://github.com/virgesmith/humanleague.git
 
-git clone -b fix/NoneType --single-branch https://github.com/alan-turing-institute/household_microsynth/
+git clone -b fix/NoneType --single-branch https://github.com/alan-turing-institute/household_microsynth.git
 
 git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
 
@@ -116,6 +114,7 @@ echo
 
 cd ../household_microsynth
 ./setup.py test
+
 echo
 echo "SPENSER packages pulled and installed."
 
@@ -158,4 +157,3 @@ echo 'Done!'
 
 now=$(date +"%T")
 echo "Current time : $now"
-
