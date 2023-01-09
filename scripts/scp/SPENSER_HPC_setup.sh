@@ -6,30 +6,23 @@ echo "Current time : $now"
 # Download (and install) all git repo's
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
-
+source ~/.bashrc
 if ! command -v conda &> /dev/null
 then
+    echo
+    echo -e "\e[31mInstalling Conda and general dependencies\e[0m"
     # install and setup miniconda
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
     chmod +x miniconda.sh 
     bash ./miniconda.sh -b -p ~/miniconda
     export PATH=~/miniconda/bin:$PATH
     conda update -n base -c defaults conda -y
-    conda install python=3.9 pip -y
-    conda install cython -y 
+    conda install python=3.9 pip cython matplotlib pandas -y 
+    conda install -c conda-forge gxx p7zip -y
     conda init bash
     source ~/.bashrc
 fi
 
-
-# We need this for UKCensusAPI and ukpopulation to work with Scottish census data
-echo
-echo -e "\e[31mInstalling 7zip\e[0m"
-conda install --channel=conda-forge -y p7zip
-echo
-echo -e "\e[31mInstalling matplotlib\e[0m"
-conda install -y matplotlib
-echo
 
 echo -e "\e[31mDownloading all SPENSER repo's from github and installing...\e[0m"
 
