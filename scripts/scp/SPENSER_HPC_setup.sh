@@ -87,7 +87,8 @@ if [ -f "../Output Area blk.zip" ]; then
     echo "Data already exists! Using ..."
     mv "../Output Area blk.zip" data/
     cd data 
-    unzip "../Output Area blk.zip"
+    unzip "Output Area blk.zip"
+    cd .. 
 fi 
 
 echo
@@ -123,7 +124,7 @@ do
     
     # Have to run household_microsynth for LAD to produce data for
     # microsimulation tests to pass
-    cd ../household_microsynth
+    cd household_microsynth
     scripts/run_microsynth.py $var OA11
 
     echo 'Moving to run microsimulation'
@@ -155,5 +156,6 @@ do
 
     now=$(date +"%T")
     echo "Current time : $now"
+    cd .. 
 
 done
