@@ -13,11 +13,12 @@ RUN chmod 777 /home/docker
 RUN cd /home/docker
 ADD scripts/scp/* /home/docker
 ADD data/* /home/docker
-ADD submodules/* /home/docker
+ADD submodules.zip /home/docker
 WORKDIR /home/docker/
 # Comment out nextline if running on a non-arm system
 RUN sed -i 's/x86_64/aarch64/' /home/docker/SPENSER_HPC_setup.sh  
 RUN chmod +x /home/docker/SPENSER_HPC_setup.sh
+RUN unzip /home/docker/submodules.zip 
 ENTRYPOINT ["tail", "-f", "/dev/null"]
 
 # To run all Wales LADs for example: 
