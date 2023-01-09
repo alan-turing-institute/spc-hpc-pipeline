@@ -83,6 +83,12 @@ cd ../household_microsynth
 ./setup.py install
 # Make data directory if not already exists
 mkdir -p data/
+if [ -f "../Output Area blk.zip" ]; then
+    echo "Data already exists! Using ..."
+    mv "../Output Area blk.zip" data/
+    cd data 
+    unzip "../Output Area blk.zip"
+fi 
 
 echo
 echo -e "\e[31mInstalling microsimulation...\e[0m"
@@ -98,6 +104,7 @@ echo -e "\e[31mTesting household_microsynth...\e[0m"
 echo
 
 cd ../household_microsynth
+
 ./setup.py test
 
 echo
