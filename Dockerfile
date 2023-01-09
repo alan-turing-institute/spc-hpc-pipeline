@@ -18,7 +18,6 @@ WORKDIR /home/docker/
 # Comment out nextline if running on a non-arm system
 RUN sed -i 's/x86_64/aarch64/' /home/docker/SPENSER_HPC_setup.sh  
 RUN chmod +x /home/docker/SPENSER_HPC_setup.sh
-RUN unzip /home/docker/submodules.zip 
 ENTRYPOINT ["tail", "-f", "/dev/null"]
 
 # To run all Wales LADs for example: 
