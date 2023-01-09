@@ -104,6 +104,8 @@ echo
 echo "SPENSER packages pulled and installed."
 
 echo "Starting to run, if mulltiple LADs given these will be executed in sequence..."
+cd .. 
+
 mv ssm_current.json microsimulation/config/
 mv ssm_h_current.json microsimulation/config/
 mv ass_current*.json microsimulation/config/
