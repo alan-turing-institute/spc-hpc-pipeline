@@ -13,3 +13,6 @@
 [submodule "submodules/microsimulation"]
 	path = submodules/microsimulation
 	url = https://github.com/alan-turing-institute/microsimulation.git
+[submodule "submodules/UKCensusAPI"]
+	path = submodules/UKCensusAPI
+	url = https://github.com/alan-turing-institute/UKCensusAPI.git
