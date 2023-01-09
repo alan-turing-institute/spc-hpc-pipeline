@@ -1,6 +1,3 @@
-[submodule "UKCensusAPI"]
-	path = submodules/UKCensusAPI
-	url = https://github.com/alan-turing-institute/UKCensusAPI.git
 [submodule "submodules/ukpopulation"]
 	path = submodules/ukpopulation
 	url = https://github.com/ld-archer/ukpopulation.git
