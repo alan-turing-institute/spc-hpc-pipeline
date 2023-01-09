@@ -21,6 +21,7 @@ import pandas as pd
 
 import connection as conn
 import helpers
+import shutil
 
 # ORDER IS KEY HERE! 
 REQUIRED_FILES = ["script", "ssm_current", "ssm_h_current", "NOMIS_API_KEY"]
@@ -33,6 +34,7 @@ TIMEOUT = 60*24
 def get_and_handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--upload_files", help="Path to files to be uploaded to batch container and used to run the script.", required=True)
+    parser.add_argument("--submodules", help="Path where submodules are stored which are used by scripts", required=True)
     parser.add_argument("--script_file_name", help="Name of bash script to be ran on jobs, should exist in the path provided by '--upload_files' ", required=True)
     parser.add_argument("--lads", dest='alist', help="LADs codes to be ran in parallel, one code per task. Examples: --lads E06000001 E06000002 E06000003 E06000004 ",
                         type=str, nargs='*')
@@ -55,21 +57,25 @@ def get_lads_list(args):
             raise RuntimeError('Data csv file must have a column named LAD20CD')
     return lads_list
 
+
+
 def get_upload_fp(args):
     filepaths_to_upload = {f: '' for f in REQUIRED_FILES}
     filepaths_to_upload[REQUIRED_FILES[0]] = f"{args.upload_files}/{args.script_file_name}"
     for root, dirs, files in os.walk(args.upload_files):
         for filename in files:
-            if ".sh" in filename:
+            if '.sh' in filename:
                 continue
             filepath = os.path.join(root, filename)
             filepaths_to_upload[basename(filepath).split('.')[0]] = filepath
 
+    subname = "submodules"
+    shutil.make_archive(subname, "zip", args.submodules)
+    filepaths_to_upload[subname] = subname+".zip"
     if not any([ f=='' for f in filepaths_to_upload.values()]):
         return filepaths_to_upload
     else:
         raise FileNotFoundError(f"Not all required files have been found in: {filepaths_to_upload}")
-
 if __name__ == '__main__':
 
     ### Handle setup!

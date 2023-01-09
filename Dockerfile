@@ -13,6 +13,7 @@ RUN chmod 777 /home/docker
 RUN cd /home/docker
 ADD scripts/scp/* /home/docker
 ADD data/* /home/docker
+ADD submodules/* /home/docker
 WORKDIR /home/docker/
 # Comment out nextline if running on a non-arm system
 RUN sed -i 's/x86_64/aarch64/' /home/docker/SPENSER_HPC_setup.sh  

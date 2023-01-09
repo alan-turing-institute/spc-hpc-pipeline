@@ -23,33 +23,7 @@ then
     source ~/.bashrc
 fi
 
-
-echo -e "\e[31mDownloading all SPENSER repo's from github and installing...\e[0m"
-
-if [ ! -d UKCensusAPI ]
-then   
-    git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI.git
-fi
-
-if [ ! -d ukpopulation ]
-then   
-    git clone -b master --single-branch https://github.com/ld-archer/ukpopulation.git
-fi
-
-if [ ! -d UKCehumanleaguensusAPI ]
-then   
-    git clone https://github.com/virgesmith/humanleague.git
-fi 
-
-if [ ! -d household_microsynth ]
-then   
-    git clone -b fix/NoneType --single-branch https://github.com/alan-turing-institute/household_microsynth.git
-fi 
-
-if [ ! -d microsimulation ]
-then   
-    git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
-fi 
+unzip submodules.zip
 
 export API_KEY=`cat NOMIS_API_KEY.txt`
 
@@ -130,6 +104,10 @@ echo
 echo "SPENSER packages pulled and installed."
 
 echo "Starting to run, if mulltiple LADs given these will be executed in sequence..."
+mv ssm_current.json microsimulation/config/
+mv ssm_h_current.json microsimulation/config/
+mv ass_current*.json microsimulation/config/
+
 
 for var in "$@"
 do
@@ -141,9 +119,6 @@ do
 
     echo 'Moving to run microsimulation'
     cd ..
-    mv ssm_current.json microsimulation/config/
-    mv ssm_h_current.json microsimulation/config/
-    mv ass_current*.json microsimulation/config/
 
     echo 'Step 1'
     cd microsimulation
