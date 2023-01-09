@@ -23,6 +23,14 @@ pip install -r requirements.txt
 ```
 from your preferred environment in the top level directory of this repo.
 
+## Preparing submodules 
+
+Run 
+```
+git submodule update --init --recursive
+```
+to pull submodules required for these scripts 
+
 ## Setting up your NOMIS API key
 
 Ths SCP pipeline uses an API by Nomisweb which allows relatively easy programmatic access the to data.
@@ -46,6 +54,8 @@ options:
   -h, --help            show this help message and exit
   --upload_files UPLOAD_FILES
                         Path to files to be uploaded to batch container and used to run the script.
+  --submodules SUBMODULES
+                        Path where submodules are stored which are used by scripts
   --script_file_name SCRIPT_FILE_NAME
                         Name of bash script to be ran on jobs, should exist in the path provided by '--upload_files'
   --lads [ALIST ...]    LADs codes to be ran in parallel, one code per task. Examples: --lads E06000001 E06000002 E06000003 E06000004
@@ -58,11 +68,11 @@ options:
 
 1. For example, to run the SPC pipeline on 4 LADS in parallel you can run the following.
 
-``python spc-hpc-client.py --upload_files scripts/scp --script_file_name SPENSER_HPC_setup.sh --lads E06000001 E06000002 E06000003 E06000004``
+```python spc-hpc-client.py --upload_files scripts/scp --script_file_name SPENSER_HPC_setup.sh --submodules submodules --lads E06000001 E06000002 E06000003 E06000004```
 
 2. If you want to run the SPC pipeline on all the LADS in parallel you can run the following.
 
-``python spc-hpc-client.py --upload_files scripts/scp --script_file_name SPENSER_HPC_setup.sh --lads_file data/new_lad_list.csv``
+```python spc-hpc-client.py --upload_files scripts/scp --script_file_name SPENSER_HPC_setup.sh --submodules submodules --lads_file data/new_lad_list.csv```
 
 For each case you have to make sure your `POOL_NODE_COUNT` variable in the `config.py` file is 
 at least the number of LADs you plan to run in parallel and that your quota allows it ( in case 1.  `POOL_NODE_COUNT=4`). 
@@ -92,7 +102,7 @@ To be added.
 
 When you run the command
 
-``python spc-hpc-client.py --upload_files scripts/scp --script_file_name SPENSER_HPC_setup.sh --lads E06000001 E06000002 E06000003 E06000004``
+```python spc-hpc-client.py --upload_files scripts/scp --script_file_name SPENSER_HPC_setup.sh --submodules submodules --lads E06000001 E06000002 E06000003 E06000004```
 
 The batch functionality is implemented at the LAD level and follows the next steps.   
 * Creates a new batch "Job" with a name composed of the `JOB_ID` variable from the `config.py` file as the name
