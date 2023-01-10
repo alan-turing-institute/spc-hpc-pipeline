@@ -24,6 +24,7 @@ then
 fi
 
 unzip submodules.zip
+mv submodules/* .
 
 export API_KEY=`cat NOMIS_API_KEY.txt`
 
@@ -84,9 +85,10 @@ cd ../household_microsynth
 # Make data directory if not already exists
 mkdir -p data/
 if [ -f "../Output Area blk.zip" ]; then
+    mkdir cache
     echo "Data already exists! Using ..."
-    mv "../Output Area blk.zip" data/
-    cd data 
+    mv "../Output Area blk.zip" cache/
+    cd cache
     unzip "Output Area blk.zip"
     cd .. 
 fi 
