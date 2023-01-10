@@ -6,57 +6,25 @@ echo "Current time : $now"
 # Download (and install) all git repo's
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
-
+source ~/.bashrc
 if ! command -v conda &> /dev/null
 then
+    echo
+    echo -e "\e[31mInstalling Conda and general dependencies\e[0m"
     # install and setup miniconda
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
     chmod +x miniconda.sh 
     bash ./miniconda.sh -b -p ~/miniconda
     export PATH=~/miniconda/bin:$PATH
     conda update -n base -c defaults conda -y
-    conda install python=3.9 pip -y
-    conda install cython -y 
+    conda install python=3.9 pip cython matplotlib pandas -y 
+    conda install -c conda-forge gxx p7zip -y
     conda init bash
     source ~/.bashrc
 fi
 
-
-# We need this for UKCensusAPI and ukpopulation to work with Scottish census data
-echo
-echo -e "\e[31mInstalling 7zip\e[0m"
-conda install --channel=conda-forge -y p7zip
-echo
-echo -e "\e[31mInstalling matplotlib\e[0m"
-conda install -y matplotlib
-echo
-
-echo -e "\e[31mDownloading all SPENSER repo's from github and installing...\e[0m"
-
-if [ ! -d UKCensusAPI ]
-then   
-    git clone -b master --single-branch https://github.com/alan-turing-institute/UKCensusAPI.git
-fi
-
-if [ ! -d ukpopulation ]
-then   
-    git clone -b master --single-branch https://github.com/ld-archer/ukpopulation.git
-fi
-
-if [ ! -d UKCehumanleaguensusAPI ]
-then   
-    git clone https://github.com/virgesmith/humanleague.git
-fi 
-
-if [ ! -d household_microsynth ]
-then   
-    git clone -b fix/NoneType --single-branch https://github.com/alan-turing-institute/household_microsynth.git
-fi 
-
-if [ ! -d microsimulation ]
-then   
-    git clone -b fix/double_run --single-branch https://github.com/alan-turing-institute/microsimulation.git
-fi 
+unzip submodules.zip
+mv submodules/* .
 
 export API_KEY=`cat NOMIS_API_KEY.txt`
 
@@ -116,6 +84,14 @@ cd ../household_microsynth
 ./setup.py install
 # Make data directory if not already exists
 mkdir -p data/
+if [ -f "../Output Area blk.zip" ]; then
+    mkdir cache
+    echo "Data already exists! Using ..."
+    mv "../Output Area blk.zip" cache/
+    cd cache
+    unzip "Output Area blk.zip"
+    cd .. 
+fi 
 
 echo
 echo -e "\e[31mInstalling microsimulation...\e[0m"
@@ -131,26 +107,30 @@ echo -e "\e[31mTesting household_microsynth...\e[0m"
 echo
 
 cd ../household_microsynth
+
 ./setup.py test
 
 echo
 echo "SPENSER packages pulled and installed."
 
 echo "Starting to run, if mulltiple LADs given these will be executed in sequence..."
+cd .. 
+
+mv ssm_current.json microsimulation/config/
+mv ssm_h_current.json microsimulation/config/
+mv ass_current*.json microsimulation/config/
+
 
 for var in "$@"
 do
     
     # Have to run household_microsynth for LAD to produce data for
     # microsimulation tests to pass
-    cd ../household_microsynth
+    cd household_microsynth
     scripts/run_microsynth.py $var OA11
 
     echo 'Moving to run microsimulation'
     cd ..
-    mv ssm_current.json microsimulation/config/
-    mv ssm_h_current.json microsimulation/config/
-    mv ass_current*.json microsimulation/config/
 
     echo 'Step 1'
     cd microsimulation
@@ -178,5 +158,6 @@ do
 
     now=$(date +"%T")
     echo "Current time : $now"
+    cd .. 
 
 done

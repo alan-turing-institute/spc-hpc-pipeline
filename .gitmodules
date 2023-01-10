@@ -1,0 +1,15 @@
+[submodule "submodules/ukpopulation"]
+	path = submodules/ukpopulation
+	url = https://github.com/ld-archer/ukpopulation.git
+[submodule "submodules/humanleague"]
+	path = submodules/humanleague
+	url = https://github.com/virgesmith/humanleague.git
+[submodule "submodules/household_microsynth"]
+	path = submodules/household_microsynth
+	url = https://github.com/alan-turing-institute/household_microsynth.git
+[submodule "submodules/microsimulation"]
+	path = submodules/microsimulation
+	url = https://github.com/alan-turing-institute/microsimulation.git
+[submodule "submodules/UKCensusAPI"]
+	path = submodules/UKCensusAPI
+	url = https://github.com/alan-turing-institute/UKCensusAPI.git
