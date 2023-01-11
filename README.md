@@ -83,7 +83,34 @@ To be added.
 
 ### Downloading data from Azure storage when it is ready
 
-To be added.
+For a given submission all files created by each task will be stored in the storage container belonging to the storage account
+defined in the [config.py](config.py) file. The name of the container is named something like `scp-TIMESTAMP-JOB-SUBMISSION`. The files 
+produced for each LAD are stored as subdirectories named with the LAD code as described above. 
+
+To download the content of a container we use [AzCopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-ref-azcopy), is a command-line tool that moves data into and out of Azure Storage.
+First you must donwload the tool to your machine as described [here](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10#download-azcopy) and authentify using the command `AzCopy login`.
+
+Once you have logged in you can Download a directory in the following way:
+
+`azcopy copy 'https://<storage-account-name>.core.windows.net/<container-name>/<directory-path>' '<local-directory-path>' --recursive`
+
+Example in our case:
+                              
+`azcopy copy 'https://scpoutputs.blob.core.windows.net/scp-2022-12-08-13-04-44/' 'WalesMicrosimulation/' --recursive`
+                   
+You can check if the needed files for every LAD have been produced and downloaded by running a simple file counting script on the
+downloaded container directory. With the current version of this code 69 files have to be produced.
+
+In the example above you can do:
+
+```
+cd WalesMicrosimulation/scp-2022-12-08-13-04-44/
+source count_files.sh 69 
+```
+
+the script will return a warning for any subdirectory (LAD code name e.g. `W06000002`) that has a different number of files to the one given as an
+argument (69 in the example). As LAD subdirectory with a different file count than expected means that there
+was an issue on the microsimulation run for that LAD and needs to be investigated.
 
 ## What is going on "under the hood" when running on Azure batch?
 
