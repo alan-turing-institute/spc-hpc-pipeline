@@ -25,11 +25,18 @@ from your preferred environment in the top level directory of this repo.
 
 ## Preparing submodules 
 
-Run 
+Run
 ```
 git submodule update --init --recursive
 ```
-to pull submodules required for these scripts 
+to pull submodules required for these scripts. After this you will need to
+prepare a zip file with the required modules: 
+
+```
+zip -r submodules.zip submodules/
+```
+
+
 
 ## Setting up your NOMIS API key
 
