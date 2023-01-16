@@ -16,14 +16,14 @@ then
     chmod +x miniconda.sh 
     bash ./miniconda.sh -b -p ~/miniconda
     export PATH=~/miniconda/bin:$PATH
+    conda init bash
+    source ~/.bashrc
     conda update -n base -c defaults conda -y
     conda install python=3.9 pip cython matplotlib pandas -y 
     conda install -c conda-forge gxx p7zip -y
-    conda init bash
-    source ~/.bashrc
 fi
 
-unzip submodules.zip
+unzip -o submodules.zip
 mv submodules/* .
 
 export API_KEY=`cat NOMIS_API_KEY.txt`
