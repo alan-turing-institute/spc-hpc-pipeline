@@ -7,21 +7,20 @@ echo "Current time : $now"
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
 source ~/.bashrc
-if ! command -v conda &> /dev/null
-then
-    echo
-    echo -e "\e[31mInstalling Conda and general dependencies\e[0m"
-    # install and setup miniconda
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
-    chmod +x miniconda.sh 
-    bash ./miniconda.sh -b -p ~/miniconda
-    export PATH=~/miniconda/bin:$PATH
-    conda init bash
-    source ~/.bashrc
-    conda update -n base -c defaults conda -y
-    conda install python=3.9 pip cython matplotlib pandas -y 
-    conda install -c conda-forge gxx p7zip -y
-fi
+
+echo
+echo -e "\e[31mInstalling Conda and general dependencies\e[0m"
+# install and setup miniconda
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+chmod +x miniconda.sh 
+bash ./miniconda.sh -b -p ~/miniconda
+export PATH=~/miniconda/bin:$PATH
+conda init bash
+source ~/.bashrc
+conda update -n base -c defaults conda -y
+conda install python=3.9 pip cython matplotlib pandas -y 
+conda install -c conda-forge gxx p7zip -y
+
 
 unzip -o submodules.zip
 mv submodules/* .
@@ -127,32 +126,32 @@ do
     # Have to run household_microsynth for LAD to produce data for
     # microsimulation tests to pass
     cd household_microsynth
-    scripts/run_microsynth.py $var OA11
+    python -W ignore scripts/run_microsynth.py $var OA11
 
     echo 'Moving to run microsimulation'
     cd ..
 
     echo 'Step 1'
     cd microsimulation
-    scripts/run_ssm.py -c config/ssm_current.json $var
+    python -W ignore scripts/run_ssm.py -c config/ssm_current.json $var
 
     echo 'Step 2'
-    scripts/run_ssm_h.py -c config/ssm_h_current.json $var
+    python -W ignore scripts/run_ssm_h.py -c config/ssm_h_current.json $var
 
     echo 'Running assigment for 2012'
-    scripts/run_assignment.py -c config/ass_current_2012.json $var
+    python -W ignore scripts/run_assignment.py -c config/ass_current_2012.json $var
 
     echo 'Running assigment for 2020'
-    scripts/run_assignment.py -c config/ass_current_2020.json $var
+    python -W ignore  scripts/run_assignment.py -c config/ass_current_2020.json $var
 
     echo 'Running assigment for 2022'
-    scripts/run_assignment.py -c config/ass_current_2022.json $var
+    python -W ignore scripts/run_assignment.py -c config/ass_current_2022.json $var
 
     echo 'Running assigment for 2032'
-    scripts/run_assignment.py -c config/ass_current_2032.json $var
+    python -W ignore scripts/run_assignment.py -c config/ass_current_2032.json $var
 
     echo 'Running assigment for 2039'
-    scripts/run_assignment.py -c config/ass_current_2039.json $var
+    python -W ignore scripts/run_assignment.py -c config/ass_current_2039.json $var
 
     echo "Done with: $var"
 

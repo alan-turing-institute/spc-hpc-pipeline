@@ -21,15 +21,15 @@
 Configure Batch and Storage Account credentials
 """
 
-BATCH_ACCOUNT_NAME = ''  # Your batch account name
-BATCH_ACCOUNT_KEY = ''  # Your batch account key
-BATCH_ACCOUNT_URL = ''  # Your batch account URL
-STORAGE_ACCOUNT_NAME = ''
-STORAGE_ACCOUNT_KEY = ''
+BATCH_ACCOUNT_NAME = 'spcbatch'  # Your batch account name
+BATCH_ACCOUNT_KEY = '3dZPGc9xW7dmmZgzDeWdTaE2BVQlsWEi6mbJy5p0BuoO4ZSFRg5qNZd5rQk5w0SEIPCE2hX/MiC3+ABaCcKdzg=='  # Your batch account key
+BATCH_ACCOUNT_URL = 'https://spcbatch.uksouth.batch.azure.com'  # Your batch account URL
+STORAGE_ACCOUNT_NAME = 'scpoutputs'
+STORAGE_ACCOUNT_KEY = '+Qh7gN8zyl8iBPfKAgaUp0FtQlDu9vPsNSCTnSzJY3Nc/ZNJXYCCzKqsN0YSLDSBQpQiCYmebAco+AStg6MU9w=='
 STORAGE_ACCOUNT_DOMAIN = 'blob.core.windows.net' # Your storage account blob service domain
 
-POOL_ID = 'SPCPool'  # Your Pool ID
-POOL_NODE_COUNT = 1  # Pool node count
-POOL_VM_SIZE = 'STANDARD_A2_V2'  # VM Type/Size
-JOB_ID = 'SPJob'  # Job ID
+POOL_ID = 'englandtest'  # Your Pool ID
+POOL_NODE_COUNT = 4  # Pool node count
+POOL_VM_SIZE = 'STANDARD_A1_V2'  # VM Type/Size
+JOB_ID = 'englandtest'  # Job ID
 STANDARD_OUT_FILE_NAME = 'stdout.txt'  # Standard Output file

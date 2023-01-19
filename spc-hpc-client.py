@@ -72,8 +72,6 @@ def get_upload_fp(args):
     subname = "submodules"
     shutil.make_archive(subname, "zip", args.submodules)
     filepaths_to_upload[subname] = subname+".zip"
-    print(filepaths_to_upload)
-    x = input()
     if not any([ f=='' for f in filepaths_to_upload.values()]):
         return filepaths_to_upload
     else:
