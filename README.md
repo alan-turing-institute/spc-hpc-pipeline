@@ -166,3 +166,29 @@ The basic flow of the SPENSER_HPC_setup.sh script is:
 
 The script  `spc-hpc-client.py` will submit all the tasks and will wait for the tasks to finish. Once the tasks
 have finished if requests the user in the command line if they want to delete the Pool and Jobs. 
+
+
+## Running locally 
+Due to the target system for this pipeline being Ubuntu 20.02 running on anything else may require tweaking and modifications. 
+A Docker file is given to enable running of the pipeline locally with a consistent setup to azure.
+
+To build the image run
+```bash
+docker build -t "dyme-spc:Dockerfile" .
+```
+
+then begin running 
+
+```bash
+docker run --name dyme -d -t "dyme-spc:Dockerfile"
+```
+
+with it running you can then start a bash terminal into the container
+```
+docker exec -it dyme bash 
+```
+
+Here, run the spenser script with a LADs list or single LAD. In the example below the full set of Wales will be run
+```
+./SPENSER_HPC_setup.sh `awk -F "\"*,\"*" '{print substr($1,2)}' new_lad_list_Wales.csv | awk 'NR!=1 {print}'`
+```
