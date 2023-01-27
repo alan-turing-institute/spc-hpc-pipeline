@@ -97,7 +97,7 @@ def upload_file_to_container(blob_storage_service_client: BlobServiceClient,
         blob_name,
         account_key=config.STORAGE_ACCOUNT_KEY,
         permission=BlobSasPermissions(read=True, write=True),
-        expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=5)
     )
 
 
@@ -207,7 +207,7 @@ def add_tasks(batch_service_client: BatchServiceClient, job_id: str, input_scrip
             input_container_name,
             account_key=config.STORAGE_ACCOUNT_KEY,
             permission=BlobSasPermissions(read=True, write=True),
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=72)
         )
 
         container_sas_url = "https://{}.blob.core.windows.net/{}?{}".format(
