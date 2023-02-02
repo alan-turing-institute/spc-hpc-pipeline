@@ -6,7 +6,6 @@ echo "Current time : $now"
 # Download (and install) all git repo's
 sudo apt-get update
 sudo apt install -y build-essential manpages-dev zip unzip
-source ~/.bashrc
 
 echo
 echo -e "\e[31mInstalling Conda and general dependencies\e[0m"
