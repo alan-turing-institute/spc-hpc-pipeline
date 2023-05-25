@@ -121,7 +121,9 @@ def collate_ass(code_map: Dict[str, List[str]], in_path: str, out_path: str):
             ass_hh = [pd.read_csv(f"{in_path}/ass_hh_{old_code}_OA11_{year}.csv") for old_code in old_codes]
             (combined_ssm, combined_ssm_hh, combined_ass, combined_ass_hh) = (ssm[0], ssm_hh[0], ass[0], ass_hh[0])
             for (current_ssm, current_ssm_hh, current_ass, current_ass_hh) in zip(ssm[1:], ssm_hh[1:], ass[1:], ass_hh[1:]):
-                # Make ID maps
+                # Make ID maps using current max indices to guarantee unique ids
+                # NB. Not guaranteed to be montonic as outputs from SPENSER (the first df)
+                # are not.
                 new_pid_start = combined_ssm["PID"].max() + 1
                 new_hid_start = combined_ssm_hh["HID"].max() + 1
                 pid_map = dict(zip(current_ssm["PID"].to_list(),list(range(new_pid_start, new_pid_start + current_ssm.shape[0]))))
@@ -173,7 +175,7 @@ def main(args: ArgumentParser):
 
     # Perform collations
     print("Collating 'ssm_*' outputs...")
-    # collate_ssm(code_map, args.data_in, args.data_out)
+    collate_ssm(code_map, args.data_in, args.data_out)
     print("Collating 'ass_*' outputs...")
     collate_ass(code_map, args.data_in, args.data_out)
     
