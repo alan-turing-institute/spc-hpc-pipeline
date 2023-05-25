@@ -65,8 +65,10 @@ def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
             (combined_ssm, combined_ssm_hh) = (ssm[0], ssm_hh[0])
             for (current_ssm, current_ssm_hh) in zip(ssm[1:], ssm_hh[1:]):
                 # Make ID maps
-                pid_map = dict(zip(current_ssm["PID"].to_list(),(current_ssm["PID"] + combined_ssm["PID"].max() + 1).to_list()))
-                hid_map = dict(zip(current_ssm_hh["HID"].to_list(),(current_ssm_hh["HID"] + combined_ssm_hh["HID"].max() + 1).to_list()))
+                new_pid_start = combined_ssm["PID"].max() + 1
+                new_hid_start = combined_ssm_hh["HID"].max() + 1
+                pid_map = dict(zip(current_ssm["PID"].to_list(),list(range(new_pid_start, new_pid_start + current_ssm.shape[0]))))
+                hid_map = dict(zip(current_ssm_hh["HID"].to_list(), list(range(new_hid_start, new_hid_start + current_ssm_hh.shape[0]))))
                 hrpid_map = pid_map.copy()
                 hrpid_map[-1] = -1
 
@@ -106,8 +108,10 @@ def collate_ass(code_map: Dict[str, List[str]], in_path: str, out_path: str):
             (combined_ssm, combined_ssm_hh, combined_ass, combined_ass_hh) = (ssm[0], ssm_hh[0], ass[0], ass_hh[0])
             for (current_ssm, current_ssm_hh, current_ass, current_ass_hh) in zip(ssm[1:], ssm_hh[1:], ass[1:], ass_hh[1:]):
                 # Make ID maps
-                pid_map = dict(zip(current_ssm["PID"].to_list(),(current_ssm["PID"] + combined_ssm["PID"].max() + 1).to_list()))
-                hid_map = dict(zip(current_ssm_hh["HID"].to_list(),(current_ssm_hh["HID"] + combined_ssm_hh["HID"].max() + 1).to_list()))
+                new_pid_start = combined_ssm["PID"].max() + 1
+                new_hid_start = combined_ssm_hh["HID"].max() + 1
+                pid_map = dict(zip(current_ssm["PID"].to_list(),list(range(new_pid_start, new_pid_start + current_ssm.shape[0]))))
+                hid_map = dict(zip(current_ssm_hh["HID"].to_list(), list(range(new_hid_start, new_hid_start + current_ssm_hh.shape[0]))))
                 hrpid_map = pid_map.copy()
                 hrpid_map[-1] = -1
 
