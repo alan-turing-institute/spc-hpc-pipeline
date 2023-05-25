@@ -53,6 +53,8 @@ def check_combined_ssm(combined: pd.DataFrame, old: List[pd.DataFrame]):
         assert combined["HID"].duplicated().sum() == 0
     if "PID" in combined.columns:
         assert combined["PID"].duplicated().sum() == 0
+    assert combined.isna().any() == False
+
 
 def check_combined_ass_hh(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined.shape[0] == sum([df.shape[0] for df in old])
@@ -61,6 +63,7 @@ def check_combined_ass_hh(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined[combined["HRPID"]!=-1]["HRPID"].duplicated().sum() == 0
     # Only single area for a given HRPID code that is assigned should be present
     combined[combined["HRPID"]!=-1].groupby("HRPID")["Area"].nunique().eq(1).all()
+    assert combined.isna().any() == False
 
 def check_combined_ass(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined.shape[0] == sum([df.shape[0] for df in old])
@@ -68,6 +71,7 @@ def check_combined_ass(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined["PID"].duplicated().sum() == 0
     # Only single area for a given HID code that is assigned should be present
     assert combined[combined["HID"]!=-1].groupby("HID")["Area"].nunique().eq(1).all()
+    assert combined.isna().any() == False
 
 
 def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
