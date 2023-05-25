@@ -79,6 +79,15 @@ def check_combined_ass(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined["PID"].min() >= 0
     assert combined["HID"].min() >= -1
 
+def generate_new_ids(combined: pd.DataFrame, current: pd.DataFrame, id_col: str) -> Dict[int, int]:
+    """Generates new unique integer IDs."""
+    new_start = combined[id_col].max() + 1
+    new_ids = dict(zip(current[id_col].to_list(), list(range(new_start, new_start + current.shape[0]))))
+    # Ensure "-1" entries are maintained
+    new_ids[-1] = -1
+    return new_ids
+
+
 def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
     """Collate ssm outputs."""
     for new_code, old_codes in tqdm(code_map.items()):
@@ -88,13 +97,8 @@ def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
             (combined_ssm, combined_ssm_hh) = (ssm[0], ssm_hh[0])
             for (current_ssm, current_ssm_hh) in zip(ssm[1:], ssm_hh[1:]):
                 # Make ID maps
-                new_pid_start = combined_ssm["PID"].max() + 1
-                new_hid_start = combined_ssm_hh["HID"].max() + 1
-                pid_map = dict(zip(current_ssm["PID"].to_list(),list(range(new_pid_start, new_pid_start + current_ssm.shape[0]))))
-                hid_map = dict(zip(current_ssm_hh["HID"].to_list(), list(range(new_hid_start, new_hid_start + current_ssm_hh.shape[0]))))
-                # Ensure "-1" entries are maintained
-                pid_map[-1] = -1
-                hid_map[-1] = -1
+                pid_map = generate_new_ids(combined_ssm, current_ssm, "PID")
+                hid_map = generate_new_ids(combined_ssm_hh, current_ssm_hh, "HID")
 
                 # Update assignments IDS
                 current_ssm["PID"] = current_ssm["PID"].map(pid_map)
@@ -134,12 +138,9 @@ def collate_ass(code_map: Dict[str, List[str]], in_path: str, out_path: str):
                 # Make ID maps using current max indices to guarantee unique ids
                 # NB. Not guaranteed to be montonic as outputs from SPENSER (the first df)
                 # are not.
-                new_pid_start = combined_ssm["PID"].max() + 1
-                new_hid_start = combined_ssm_hh["HID"].max() + 1
-                pid_map = dict(zip(current_ssm["PID"].to_list(),list(range(new_pid_start, new_pid_start + current_ssm.shape[0]))))
-                hid_map = dict(zip(current_ssm_hh["HID"].to_list(), list(range(new_hid_start, new_hid_start + current_ssm_hh.shape[0]))))
-                hrpid_map = pid_map.copy()
-                hrpid_map[-1] = -1
+                # Make ID maps
+                pid_map = generate_new_ids(combined_ssm, current_ssm, "PID")
+                hid_map = generate_new_ids(combined_ssm_hh, current_ssm_hh, "HID")
 
                 # Update assignments IDS
                 current_ssm["PID"] = current_ssm["PID"].map(pid_map)
@@ -147,7 +148,7 @@ def collate_ass(code_map: Dict[str, List[str]], in_path: str, out_path: str):
                 current_ass["PID"] = current_ass["PID"].map(pid_map)
                 current_ass["HID"] = current_ass["HID"].map(hid_map)
                 current_ass_hh["HID"] = current_ass_hh["HID"].map(hid_map)
-                current_ass_hh["HRPID"] = current_ass_hh["HRPID"].map(hrpid_map)
+                current_ass_hh["HRPID"] = current_ass_hh["HRPID"].map(pid_map)
 
                 # Combine
                 combined_ssm = pd.concat([combined_ssm, current_ssm])
