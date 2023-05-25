@@ -46,15 +46,29 @@ def get_code_map(path: str) -> Dict[str, List[str]]:
 
 
 
-def check_combined(combined: pd.DataFrame, old: List[pd.DataFrame]):
+def check_combined_ssm(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined.shape[0] == sum([df.shape[0] for df in old])
     assert all([combined.shape[1] == df.shape[1] for df in old])
     if "HID" in combined.columns:
         assert combined["HID"].duplicated().sum() == 0
     if "PID" in combined.columns:
         assert combined["PID"].duplicated().sum() == 0
-    if "HRPID" in combined.columns:
-        assert combined[combined["HRPID"]!=-1]["HRPID"].duplicated().sum() == 0
+
+def check_combined_ass_hh(combined: pd.DataFrame, old: List[pd.DataFrame]):
+    assert combined.shape[0] == sum([df.shape[0] for df in old])
+    assert all([combined.shape[1] == df.shape[1] for df in old])
+    assert combined["HID"].duplicated().sum() == 0
+    assert combined[combined["HRPID"]!=-1]["HRPID"].duplicated().sum() == 0
+    # Only single area for a given HRPID code that is assigned should be present
+    combined[combined["HRPID"]!=-1].groupby("HRPID")["Area"].nunique().eq(1).all()
+
+def check_combined_ass(combined: pd.DataFrame, old: List[pd.DataFrame]):
+    assert combined.shape[0] == sum([df.shape[0] for df in old])
+    assert all([combined.shape[1] == df.shape[1] for df in old])
+    assert combined["PID"].duplicated().sum() == 0
+    # Only single area for a given HID code that is assigned should be present
+    assert combined[combined["HID"]!=-1].groupby("HID")["Area"].nunique().eq(1).all()
+
 
 def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
     """Collate ssm outputs."""
@@ -82,8 +96,8 @@ def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
                 
 
             # Write new outputs
-            check_combined(combined_ssm, ssm)
-            check_combined(combined_ssm_hh, ssm_hh)
+            check_combined_ssm(combined_ssm, ssm)
+            check_combined_ssm(combined_ssm_hh, ssm_hh)
 
             # NB. These assertions are not correct as assumed the data for housefolds was monotnic
             # in HID but the labels are not guranteed to be this way. Duplicated assertion
@@ -130,10 +144,10 @@ def collate_ass(code_map: Dict[str, List[str]], in_path: str, out_path: str):
                 combined_ass_hh = pd.concat([combined_ass_hh, current_ass_hh])
 
             # Write new outputs
-            check_combined(combined_ssm, ssm)
-            check_combined(combined_ssm_hh, ssm_hh)
-            check_combined(combined_ass, ass)
-            check_combined(combined_ass_hh, ass_hh)
+            check_combined_ssm(combined_ssm, ssm)
+            check_combined_ssm(combined_ssm_hh, ssm_hh)
+            check_combined_ass(combined_ass, ass)
+            check_combined_ass_hh(combined_ass_hh, ass_hh)
             
             combined_ssm.to_csv(f"{out_path}/ssm_{new_code}_MSOA11_ppp_{year}_2.csv", index=False)
             combined_ssm_hh.to_csv(f"{out_path}/ssm_hh_{new_code}_OA11_{year}_2.csv", index=False)
@@ -159,7 +173,7 @@ def main(args: ArgumentParser):
 
     # Perform collations
     print("Collating 'ssm_*' outputs...")
-    collate_ssm(code_map, args.data_in, args.data_out)
+    # collate_ssm(code_map, args.data_in, args.data_out)
     print("Collating 'ass_*' outputs...")
     collate_ass(code_map, args.data_in, args.data_out)
     
