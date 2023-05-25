@@ -45,82 +45,90 @@ def get_code_map(path: str) -> Dict[str, List[str]]:
     return new_codes_from_old
 
 
-def collate_ass(code_map: Dict[str, List[str]], args: ArgumentParser):
-    """Collates ass prefix files from old to new LAD codes."""
-    resolution = "MSOA11"
-    for new_code, old_codes in tqdm(code_map.items()):
-        for year in [2012, 2020, 2022, 2032, 2039]:
-            old = [
-                pd.read_csv(f"{args.data_in}/ass_{old_code}_{resolution}_{year}.csv")
-                for old_code in old_codes
-            ]
-            combined = pd.concat(old)
-            assert combined.shape[0] == sum([df.shape[0] for df in old])
-            assert all([combined.shape[1] == df.shape[1] for df in old])
-            if not args.dry_run:
-                combined.to_csv(
-                    f"{args.data_out}/ass_{new_code}_{resolution}_{year}.csv",
-                    index=False,
-                )
 
+def check_combined(combined: pd.DataFrame, old: List[pd.DataFrame]):
+    assert combined.shape[0] == sum([df.shape[0] for df in old])
+    assert all([combined.shape[1] == df.shape[1] for df in old])
+    if "HID" in combined.columns:
+        assert combined["HID"].duplicated().shape[0] == 0
+    if "PID" in combined.columns:
+        assert combined["PID"].duplicated().shape[0] == 0
+    if "HRPID" in combined.columns:
+        assert combined[combined["HRPID"]!=-1]["HRPID"].duplicated().shape[0] == 0
 
-def collate_ass_hh(code_map: Dict[str, List[str]], args: ArgumentParser):
-    """Collates ass_hh prefix files from old to new LAD codes."""
-    resolution = "OA11"
-    for new_code, old_codes in tqdm(code_map.items()):
-        for year in [2012, 2020, 2022, 2032, 2039]:
-            old = [
-                pd.read_csv(f"{args.data_in}/ass_hh_{old_code}_{resolution}_{year}.csv")
-                for old_code in old_codes
-            ]
-            combined = pd.concat(old)
-            assert combined.shape[0] == sum([df.shape[0] for df in old])
-            assert all([combined.shape[1] == df.shape[1] for df in old])
-            if not args.dry_run:
-                combined.to_csv(
-                    f"{args.data_out}/ass_hh_{new_code}_{resolution}_{year}.csv",
-                    index=False,
-                )
-
-
-def collate_ssm(code_map: Dict[str, List[str]], args: ArgumentParser):
-    """Collates ssm prefix files from old to new LAD codes."""
-    resolution = "MSOA11"
+def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
+    """Collate ssm outputs."""
     for new_code, old_codes in tqdm(code_map.items()):
         for year in list(range(2011, 2040)):
-            old = [
-                pd.read_csv(
-                    f"{args.data_in}/ssm_{old_code}_{resolution}_ppp_{year}.csv"
-                )
-                for old_code in old_codes
-            ]
-            combined = pd.concat(old)
-            assert combined.shape[0] == sum([df.shape[0] for df in old])
-            assert all([combined.shape[1] == df.shape[1] for df in old])
-            if not args.dry_run:
-                combined.to_csv(
-                    f"{args.data_out}/ssm_{new_code}_{resolution}_ppp_{year}.csv",
-                    index=False,
-                )
+            ssm = [pd.read_csv(f"{in_path}/ssm_{old_code}_MSOA11_ppp_{year}.csv") for old_code in old_codes]
+            ssm_hh = [pd.read_csv(f"{in_path}/ssm_hh_{old_code}_OA11_{year}.csv") for old_code in old_codes]
+            (combined_ssm, combined_ssm_hh) = (ssm[0], ssm_hh[0])
+            for (current_ssm, current_ssm_hh) in zip(ssm[1:], ssm_hh[1:]):
+                # Make ID maps
+                pid_map = dict(zip(current_ssm["PID"].to_list(),(current_ssm["PID"] + combined_ssm["PID"].max() + 1).to_list()))
+                hid_map = dict(zip(current_ssm_hh["HID"].to_list(),(current_ssm_hh["HID"] + combined_ssm_hh["HID"].max() + 1).to_list()))
+                hrpid_map = pid_map.copy()
+                hrpid_map[-1] = -1
+
+                # Update assignments IDS
+                current_ssm["PID"] = current_ssm["PID"].map(pid_map)
+                current_ssm_hh["HID"] = current_ssm_hh["HID"].map(hid_map)
+
+                # Combine
+                combined_ssm = pd.concat([combined_ssm, current_ssm])
+                combined_ssm_hh = pd.concat([combined_ssm_hh, current_ssm_hh])
+                
+
+            # Write new outputs
+            check_combined(combined_ssm, ssm)
+            check_combined(combined_ssm_hh, ssm_hh)
+            assert list(combined_ssm["PID"].unique()) == list(range(0, combined_ssm.shape[0]))
+            assert list(combined_ssm_hh["HID"].unique()) == list(range(0, combined_ssm_hh.shape[0]))
+            
+            combined_ssm.to_csv(f"{out_path}/ssm_{new_code}_MSOA11_ppp_{year}.csv", index=False)
+            combined_ssm_hh.to_csv(f"{out_path}/ssm_hh_{new_code}_OA11_{year}.csv", index=False)
 
 
-def collate_ssm_hh(code_map: Dict[str, List[str]], args: ArgumentParser):
-    """Collates ssm_hh prefix files from old to new LAD codes."""
-    resolution = "OA11"
+def collate_ass(code_map: Dict[str, List[str]], in_path: str, out_path: str):
+    """Collate ass outputs."""
     for new_code, old_codes in tqdm(code_map.items()):
-        for year in list(range(2011, 2040)):
-            old = [
-                pd.read_csv(f"{args.data_in}/ssm_hh_{old_code}_{resolution}_{year}.csv")
-                for old_code in old_codes
-            ]
-            combined = pd.concat(old)
-            assert combined.shape[0] == sum([df.shape[0] for df in old])
-            assert all([combined.shape[1] == df.shape[1] for df in old])
-            if not args.dry_run:
-                combined.to_csv(
-                    f"{args.data_out}/ssm_hh_{new_code}_{resolution}_{year}.csv",
-                    index=False,
-                )
+        for year in [2012, 2020, 2022, 2032, 2039]:
+            ssm = [pd.read_csv(f"{in_path}/ssm_{old_code}_MSOA11_ppp_{year}.csv") for old_code in old_codes]
+            ssm_hh = [pd.read_csv(f"{in_path}/ssm_hh_{old_code}_OA11_{year}.csv") for old_code in old_codes]
+            ass = [pd.read_csv(f"{in_path}/ass_{old_code}_MSOA11_{year}.csv") for old_code in old_codes]
+            ass_hh = [pd.read_csv(f"{in_path}/ass_hh_{old_code}_OA11_{year}.csv") for old_code in old_codes]
+            (combined_ssm, combined_ssm_hh, combined_ass, combined_ass_hh) = (ssm[0], ssm_hh[0], ass[0], ass_hh[0])
+            for (current_ssm, current_ssm_hh, current_ass, current_ass_hh) in zip(ssm[1:], ssm_hh[1:], ass[1:], ass_hh[1:]):
+                # Make ID maps
+                pid_map = dict(zip(current_ssm["PID"].to_list(),(current_ssm["PID"] + combined_ssm["PID"].max() + 1).to_list()))
+                hid_map = dict(zip(current_ssm_hh["HID"].to_list(),(current_ssm_hh["HID"] + combined_ssm_hh["HID"].max() + 1).to_list()))
+                hrpid_map = pid_map.copy()
+                hrpid_map[-1] = -1
+
+                # Update assignments IDS
+                current_ssm["PID"] = current_ssm["PID"].map(pid_map)
+                current_ssm_hh["HID"] = current_ssm_hh["HID"].map(hid_map)
+                current_ass["PID"] = current_ass["PID"].map(pid_map)
+                current_ass["HID"] = current_ass["HID"].map(hid_map)
+                current_ass_hh["HID"] = current_ass_hh["HID"].map(hid_map)
+                current_ass_hh["HRPID"] = current_ass_hh["HRPID"].map(hrpid_map)
+
+                # Combine
+                combined_ssm = pd.concat([combined_ssm, current_ssm])
+                combined_ssm_hh = pd.concat([combined_ssm_hh, current_ssm_hh])
+                combined_ass = pd.concat([combined_ass, current_ass])
+                combined_ass_hh = pd.concat([combined_ass_hh, current_ass_hh])
+
+            # Write new outputs
+            check_combined(combined_ssm, ssm)
+            check_combined(combined_ssm_hh, ssm_hh)
+            check_combined(combined_ass, ass)
+            check_combined(combined_ass_hh, ass_hh)
+            
+            combined_ssm.to_csv(f"{out_path}/ssm_{new_code}_MSOA11_ppp_{year}_2.csv", index=False)
+            combined_ssm_hh.to_csv(f"{out_path}/ssm_hh_{new_code}_OA11_{year}_2.csv", index=False)
+            combined_ass.to_csv(f"{out_path}/ass_{new_code}_MSOA11_{year}.csv", index=False)
+            combined_ass_hh.to_csv(f"{out_path}/ass_hh_{new_code}_OA11_{year}.csv", index=False)
 
 
 def main(args: ArgumentParser):
@@ -140,14 +148,11 @@ def main(args: ArgumentParser):
     code_map = get_code_map(args.data_lookup)
 
     # Perform collations
-    print("Collating 'ass_*' outputs...")
-    collate_ass(code_map, args)
-    print("Collating 'ass_hh_*' outputs...")
-    collate_ass_hh(code_map, args)
     print("Collating 'ssm_*' outputs...")
-    collate_ssm(code_map, args)
-    print("Collating 'ssm_hh_*' outputs...")
-    collate_ssm_hh(code_map, args)
+    collate_ssm(code_map, args.data_in, args.data_out)
+    print("Collating 'ass_*' outputs...")
+    collate_ass(code_map, args.data_in, args.data_out)
+    
 
 
 if __name__ == "__main__":
@@ -158,7 +163,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data_out",
-        default="/Volumes/vmfileshare/SPENSER_pipeline_new_lads/microsimulation/data/",
+        default="/Volumes/vmfileshare/SPENSER_pipeline_new_lads_2/microsimulation/data/",
     )
     parser.add_argument("--data_lookup", default="~/spc-hpc-pipeline/data/")
     parser.add_argument("--dry_run", action="store_true")
