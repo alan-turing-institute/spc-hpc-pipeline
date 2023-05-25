@@ -51,8 +51,10 @@ def check_combined_ssm(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert all([combined.shape[1] == df.shape[1] for df in old])
     if "HID" in combined.columns:
         assert combined["HID"].duplicated().sum() == 0
+        assert combined["HID"].min() >= 0
     if "PID" in combined.columns:
         assert combined["PID"].duplicated().sum() == 0
+        assert combined["PID"].min() >= 0
     assert combined.isna().any(axis=None) == False
 
 
@@ -64,6 +66,8 @@ def check_combined_ass_hh(combined: pd.DataFrame, old: List[pd.DataFrame]):
     # Only single area for a given HRPID code that is assigned should be present
     combined[combined["HRPID"]!=-1].groupby("HRPID")["Area"].nunique().eq(1).all()
     assert combined.isna().any(axis=None) == False
+    assert combined["HRPID"].min() >= -1
+    assert combined["HID"].min() >= 0
 
 def check_combined_ass(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined.shape[0] == sum([df.shape[0] for df in old])
@@ -72,7 +76,8 @@ def check_combined_ass(combined: pd.DataFrame, old: List[pd.DataFrame]):
     # Only single area for a given HID code that is assigned should be present
     assert combined[combined["HID"]!=-1].groupby("HID")["Area"].nunique().eq(1).all()
     assert combined.isna().any(axis=None) == False
-
+    assert combined["PID"].min() >= 0
+    assert combined["HID"].min() >= -1
 
 def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
     """Collate ssm outputs."""
@@ -87,8 +92,9 @@ def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
                 new_hid_start = combined_ssm_hh["HID"].max() + 1
                 pid_map = dict(zip(current_ssm["PID"].to_list(),list(range(new_pid_start, new_pid_start + current_ssm.shape[0]))))
                 hid_map = dict(zip(current_ssm_hh["HID"].to_list(), list(range(new_hid_start, new_hid_start + current_ssm_hh.shape[0]))))
-                hrpid_map = pid_map.copy()
-                hrpid_map[-1] = -1
+                # Ensure "-1" entries are maintained
+                pid_map[-1] = -1
+                hid_map[-1] = -1
 
                 # Update assignments IDS
                 current_ssm["PID"] = current_ssm["PID"].map(pid_map)
