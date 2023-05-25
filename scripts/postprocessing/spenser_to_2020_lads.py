@@ -50,11 +50,11 @@ def check_combined(combined: pd.DataFrame, old: List[pd.DataFrame]):
     assert combined.shape[0] == sum([df.shape[0] for df in old])
     assert all([combined.shape[1] == df.shape[1] for df in old])
     if "HID" in combined.columns:
-        assert combined["HID"].duplicated().shape[0] == 0
+        assert combined["HID"].duplicated().sum() == 0
     if "PID" in combined.columns:
-        assert combined["PID"].duplicated().shape[0] == 0
+        assert combined["PID"].duplicated().sum() == 0
     if "HRPID" in combined.columns:
-        assert combined[combined["HRPID"]!=-1]["HRPID"].duplicated().shape[0] == 0
+        assert combined[combined["HRPID"]!=-1]["HRPID"].duplicated().sum() == 0
 
 def collate_ssm(code_map: Dict[str, List[str]], in_path: str, out_path: str):
     """Collate ssm outputs."""
