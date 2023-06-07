@@ -8,6 +8,9 @@ from typing import Dict, List
 import pandas as pd
 from tqdm import tqdm
 
+# TODO: consider not mutating the current ID columns to allow reconstruction post-transform:
+# ie. rename old ones ("HID_old") and then assign to "HID"
+# This way original spenser outputs remain present but columns renamed.
 
 def get_spenser_codes(path: str) -> pd.DataFrame:
     """Returns a dataframe of 2016 LAD codes that SPENSER runs."""
