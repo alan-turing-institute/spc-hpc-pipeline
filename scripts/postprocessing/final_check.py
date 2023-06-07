@@ -94,3 +94,6 @@ df_files_2 = get_file_list(data_paths[1:])
 assert (
     len(set(df_files_1["region"].to_list()) & set(df_files_2["region"].to_list())) == 0
 )
+
+# Print remaining regions as space sep string
+print(" ".join(df_files_2["region"].drop_duplicates().to_list()))
