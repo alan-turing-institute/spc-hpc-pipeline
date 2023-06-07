@@ -71,8 +71,10 @@ combined = new_lad_list.merge(
 
 
 # Only consider the assigned outputs
-combined = combined[combined["type"].str.startswith("ass")]
+combined = combined[combined["type"].str.startswith("ass")].reset_index(drop=True)
 
+# Print full dataframe
+print(combined.to_markdown())
 
 # Check none are missing
 assert combined[combined["full_path"].isna()].shape[0] == 0
