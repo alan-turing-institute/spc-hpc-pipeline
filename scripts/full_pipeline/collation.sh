@@ -3,8 +3,10 @@
 # Copies microsimulation output to region/year/./ file structure for SPENSER
 # outputs.
 
-# Args: -s <PATH>: Source path of microsimulation data to collate -t <PATH>:
-#   Destination (target) path to copy data to -d       : Dry run flag.
+# Args:
+#  -s <PATH>: Source path of microsimulation data to collate
+#  -t <PATH>: Destination (target) path to copy data to
+#  -d       : Dry run flag.
 
 dryrun='false'
 while getopts 'ds:t:' flag; do
