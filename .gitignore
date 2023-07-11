@@ -7,3 +7,6 @@ scripts/scp/NOMIS_API_KEY.txt
 __*
 .vscode/*
 *.DS_Store
+# notebooks
+*.ipynb
+notebooks/
