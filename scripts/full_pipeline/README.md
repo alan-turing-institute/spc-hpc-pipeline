@@ -9,10 +9,13 @@ The following scripts assume the following have been installed:
   environments
 - [pueue](https://github.com/Nukesor/pueue): a process queue for running all
   LADs
+- [Nomisweb API key](../../README.md#setting-up-your-nomis-api-key): a Nomisweb
+  API key is required as an environment variable `$API_KEY` for successful
+  installation
 
 ### Submodule and environment set-up
-Run [install_script.sh](install.sh) to set-up submodules
-and environment to run pipeline from repo root.to run pipeline from repo root.
+Run [install_script.sh](install.sh) to set-up submodules and environment to run
+pipeline from repo root.
 ```bash
 ./scripts/full_pipeline/install.sh
 ```
