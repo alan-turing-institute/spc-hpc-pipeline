@@ -10,32 +10,47 @@ set -e
 # Have to run household_microsynth for LAD to produce data for
 # microsimulation tests to pass
 cd household_microsynth
-NO_CACHE=false python -W ignore scripts/run_microsynth.py $var OA11
+
+# NO_CACHE is used to ensure the correct resolution is retrieved for Scotland.
+# See [UKCensusAPI](https://github.com/alan-turing-institute/UKCensusAPI/commit/61bf3ee667a5be4c6a91afe4d13415f85d35ca0b).
+#
+# For household microsimulation it can be set to false, while for individual
+# microsimulation (Step 1 and Step 2), it needs to be set to NO_CACHE=true for
+# successful run for Scotland.
+
+export NO_CACHE=false
+python -W ignore scripts/run_microsynth.py $var OA11
 
 echo 'Moving to run microsimulation'
 cd ..
 
 echo 'Step 1'
 cd microsimulation
-NO_CACHE=true python -W ignore scripts/run_ssm.py -c config/ssm_current.json $var
+
+# Set NO_CACHE=true so given above comment.
+# England and Wales may use NO_CACHE=false throughout but no difference occurs
+# with setting as NO_CACHE=true. So it is set here so that all England, Wales and
+# Scotland may run with single script.
+export NO_CACHE=true
+python -W ignore scripts/run_ssm.py -c config/ssm_current.json $var
 
 echo 'Step 2'
-NO_CACHE=true python -W ignore scripts/run_ssm_h.py -c config/ssm_h_current.json $var
+python -W ignore scripts/run_ssm_h.py -c config/ssm_h_current.json $var
 
 echo 'Running assigment for 2012'
-NO_CACHE=true python -W ignore scripts/run_assignment.py -c config/ass_current_2012.json $var
+python -W ignore scripts/run_assignment.py -c config/ass_current_2012.json $var
 
 echo 'Running assigment for 2020'
-NO_CACHE=true python -W ignore  scripts/run_assignment.py -c config/ass_current_2020.json $var
+python -W ignore  scripts/run_assignment.py -c config/ass_current_2020.json $var
 
 echo 'Running assigment for 2022'
-NO_CACHE=true python -W ignore scripts/run_assignment.py -c config/ass_current_2022.json $var
+python -W ignore scripts/run_assignment.py -c config/ass_current_2022.json $var
 
 echo 'Running assigment for 2032'
-NO_CACHE=true python -W ignore scripts/run_assignment.py -c config/ass_current_2032.json $var
+python -W ignore scripts/run_assignment.py -c config/ass_current_2032.json $var
 
 echo 'Running assigment for 2039'
-NO_CACHE=true python -W ignore scripts/run_assignment.py -c config/ass_current_2039.json $var
+python -W ignore scripts/run_assignment.py -c config/ass_current_2039.json $var
 
 echo "Done with: $var"
 
