@@ -10,12 +10,12 @@
 
 dryrun='false'
 while getopts 'ds:t:' flag; do
-  case "${flag}" in
-    d) dryrun='true' ;;
-	s) SOURCE="${OPTARG}" ;;
-	t) DESTINATION="${OPTARG}" ;;
-    *) error "Unexpected option ${flag}" ;;
-  esac
+	case "${flag}" in
+		d) dryrun='true' ;;
+		s) SOURCE="${OPTARG}" ;;
+		t) DESTINATION="${OPTARG}" ;;
+		*) error "Unexpected option ${flag}" ;;
+	esac
 done
 
 for region in "England" "Wales" "Scotland"; do
