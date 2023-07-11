@@ -37,6 +37,7 @@ else
     echo "${os_name} not recognised."
     exit 1
 fi
+pip install tabulate tqdm
 
 # Copy config
 cd submodules
