@@ -51,8 +51,9 @@ python scripts/postprocessing/spenser_to_2020_lads.py \
 Finally run [collation.sh](collation.sh) to reorganise the outputs for the SPC:
 ```bash
 ./scripts/full_pipeline/collation.sh \
-    <MICROSIMULATION_DATA_PATH> \
-    <COLLATED_SPENSER_PATH>
+    -s <MICROSIMULATION_DATA_PATH> \
+    -t <COLLATED_SPENSER_PATH> \
+    -d # dry-run flag
 ```
 
 ### Test
