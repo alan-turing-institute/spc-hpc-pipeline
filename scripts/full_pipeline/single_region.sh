@@ -9,7 +9,7 @@ set -e
 
 # Have to run household_microsynth for LAD to produce data for
 # microsimulation tests to pass
-cd household_microsynth
+cd submodules/household_microsynth
 
 # NO_CACHE is used to ensure the correct resolution is retrieved for Scotland.
 # See [UKCensusAPI](https://github.com/alan-turing-institute/UKCensusAPI/commit/61bf3ee667a5be4c6a91afe4d13415f85d35ca0b).

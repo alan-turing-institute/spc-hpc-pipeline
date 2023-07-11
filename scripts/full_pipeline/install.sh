@@ -39,6 +39,7 @@ else
 fi
 
 # Copy config
+cd submodules
 mkdir -p microsimulation/config
 cp -a ../scripts/scp/ssm_current.json microsimulation/config/
 cp -a ../scripts/scp/ssm_h_current.json microsimulation/config/
