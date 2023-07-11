@@ -3,6 +3,14 @@
 A set of scripts for running the entire SPENSER pipeline on a single machine.
 
 ## Install
+### Prerequisites
+The following scripts assume the following have been installed:
+- [conda](https://docs.conda.io/en/latest/miniconda.html): for installation and
+  environments
+- [pueue](https://github.com/Nukesor/pueue): a process queue for running all
+  LADs
+
+### Submodule and environment set-up
 Run [install_script.sh](install.sh) to set-up submodules
 and environment to run pipeline from repo root.to run pipeline from repo root.
 ```bash
@@ -14,18 +22,18 @@ environment.
 ## Pipeline
 ### SPENSER with 2011 LAD codes
 A single region can be run from the repo root with
-[single_region.sh](single_region.sh):
+[single_lad.sh](single_lad.sh):
 ```bash
-./scripts/full_pipeline/single_region.sh <A_SINGLE_LAD>
+./scripts/full_pipeline/single_lad.sh <LAD>
 ```
 
-All regions can be run with [run_all_regions.sh](run_all_regions.sh) from the
+All LADs can be run with [run_all_lads.sh](run_all_lads.sh) from the
 repo root:
 ```bash
-./scripts/full_pipeline/run_all_regions.sh
+./scripts/full_pipeline/run_all_lads.sh
 ```
 This script requires [pueue](https://github.com/Nukesor/pueue) to be installed.
-Running for all regions on a single core will take several weeks.
+Running for all 380 LADs on a single core will take several weeks.
 
 
 ### Postprocessing
@@ -48,5 +56,5 @@ Finally run [collation.sh](collation.sh) to reorganise the outputs for the SPC:
 A final check that all regions are covered may be performed with:
 ```bash
 python scripts/postprocessing/final_check.py \
-    <LIST_COLLATED_SPENSER_PATHS>
+    --paths <COLLATED_SPENSER_PATHS>
 ```
