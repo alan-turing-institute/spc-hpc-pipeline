@@ -121,12 +121,13 @@ mv ass_current*.json microsimulation/config/
 
 for var in "$@"
 do
-    
+    export NO_CACHE=false
     # Have to run household_microsynth for LAD to produce data for
     # microsimulation tests to pass
     cd household_microsynth
     python -W ignore scripts/run_microsynth.py $var OA11
 
+    export NO_CACHE=true
     echo 'Moving to run microsimulation'
     cd ..
 
