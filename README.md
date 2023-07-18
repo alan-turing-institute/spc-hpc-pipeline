@@ -1,7 +1,7 @@
 # Running `SPC pipeline` on the cloud - Microsoft Azure
 
 It is possible to make use of Azure cloud infrastructure to run the SPC pipeline in two ways:
-* Using Azure blob storage to store the microsimulation outputs.
+* Using Azure blob storage to store the microsimulation outputs. These [instructions](scripts/full_pipeline/README.md) describe how to run the full pipeline on a single machine.
 * Using Azure batch to parallelize the running of microsimulation at the LAD (Local Authority Districts) level.  This can vastly speed up the running time of your job.
 
 In order to do these, you will need the following:
