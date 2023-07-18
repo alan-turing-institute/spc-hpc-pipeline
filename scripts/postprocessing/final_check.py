@@ -89,13 +89,10 @@ def main(args: ArgumentParser):
         == 0
     )
 
+
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "--paths",
-        type=str,
-        nargs="+",
-    )
+    parser.add_argument("--paths", type=str, nargs="+")
     args, unknown = parser.parse_known_args()
 
     print(args)
