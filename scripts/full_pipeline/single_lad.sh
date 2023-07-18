@@ -1,11 +1,22 @@
 #!/bin/bash
-eval "$(conda shell.bash hook)"
-conda activate spenser_run
-conda info --env
-
-var=$1
 
 set -e
+
+# Check inputs are provided
+if [[ -z $1 ]]; then
+    echo "Please enter a conda environment name to complete installation."
+fi
+if [[ -z $2 ]]; then
+    echo "Please enter a LAD."
+fi
+
+CONDA_SPENSER=$1
+var=$2
+
+eval "$(conda shell.bash hook)"
+conda activate $CONDA_SPENSER
+conda info --env
+
 
 # Have to run household_microsynth for LAD to produce data for
 # microsimulation tests to pass
