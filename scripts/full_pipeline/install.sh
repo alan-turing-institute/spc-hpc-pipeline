@@ -13,7 +13,9 @@ eval "$(conda shell.bash hook)"
 git submodule update --init --recursive
 conda create --name $CONDA_SPENSER python=3.9 -y
 conda activate $CONDA_SPENSER
-if [[ "$(conda info --json | jq -r ".active_prefix_name")" != "$CONDA_SPENSER" ]]; then
+
+ACTIVE_ENV=`conda info --json | grep -o '"active_prefix_name": "[^"]*' | grep -o '[^"]*$'`
+if [[ "$ACTIVE_ENV" != "$CONDA_SPENSER" ]]; then
     echo "${CONDA_SPENSER} is not activated. Please retry."
     exit 1
 fi
