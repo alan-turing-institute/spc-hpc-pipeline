@@ -14,26 +14,27 @@ The following scripts assume the following have been installed:
   installation
 
 ### Submodule and environment set-up
-Run [install_script.sh](install.sh) to set-up submodules and environment to run
+Run [install_script.sh](install.sh) to set-up submodules and environment
+(replace `<CONDA_SPENSER>` with a name for your conda environment) to run
 pipeline from repo root.
 ```bash
-./scripts/full_pipeline/install.sh
+./scripts/full_pipeline/install.sh <CONDA_SPENSER>
 ```
 Installation assumes conda is installed for creating the new virtual
 environment.
 
 ## Pipeline
 ### SPENSER with 2011 LAD codes
-A single region can be run from the repo root with
-[single_lad.sh](single_lad.sh):
+A single LAD (replace `<LAD>` with a specific LAD code) can be run from the repo
+root with [single_lad.sh](single_lad.sh):
 ```bash
-./scripts/full_pipeline/single_lad.sh <LAD>
+./scripts/full_pipeline/single_lad.sh <CONDA_SPENSER> <LAD>
 ```
 
 All LADs can be run with [run_all_lads.sh](run_all_lads.sh) from the
 repo root:
 ```bash
-./scripts/full_pipeline/run_all_lads.sh
+./scripts/full_pipeline/run_all_lads.sh <CONDA_SPENSER>
 ```
 This script requires [pueue](https://github.com/Nukesor/pueue) to be installed.
 Running for all 380 LADs on a single core will take several weeks.

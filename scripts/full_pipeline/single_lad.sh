@@ -4,7 +4,7 @@ set -e
 
 # Check inputs are provided
 if [[ -z $1 ]]; then
-    echo "Please enter a conda environment name to complete installation."
+    echo "Please enter a conda environment to use."
 fi
 if [[ -z $2 ]]; then
     echo "Please enter a LAD."
