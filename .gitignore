@@ -10,3 +10,7 @@ __*
 # notebooks
 *.ipynb
 notebooks/
+
+# spenser-rs
+target/
+spenser-rs/data
