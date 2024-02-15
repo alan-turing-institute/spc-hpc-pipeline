@@ -3,39 +3,51 @@ use serde::{Deserialize, Serialize};
 type MSOA = String;
 type UInt = i32;
 type Int = i32;
+#[derive(Debug)]
+pub struct HID(pub usize);
+impl std::fmt::Display for HID {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "HID #{}", self.0)
+    }
+}
+impl From<usize> for HID {
+    fn from(value: usize) -> Self {
+        Self(value)
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Household {
+pub struct Household {
     #[serde(rename = "HID")]
-    hid: Int,
+    pub hid: Int,
     #[serde(rename = "Area")]
-    area: MSOA,
+    pub area: MSOA,
     #[serde(rename = "LC4402_C_TYPACCOM")]
-    lc4402_c_typaccom: UInt,
+    pub lc4402_c_typaccom: UInt,
     #[serde(rename = "QS420_CELL")]
-    qs420_cell: Int,
+    pub qs420_cell: Int,
     #[serde(rename = "LC4402_C_TENHUK11")]
-    lc4402_c_tenhuk11: UInt,
+    pub lc4402_c_tenhuk11: UInt,
     #[serde(rename = "LC4408_C_AHTHUK11")]
-    lc4408_c_ahthuk11: Int,
+    pub lc4408_c_ahthuk11: Int,
     #[serde(rename = "CommunalSize")]
-    communal_size: Int,
+    pub communal_size: Int,
     #[serde(rename = "LC4404_C_SIZHUK11")]
-    lc4404_c_sizhuk11: UInt,
+    pub lc4404_c_sizhuk11: UInt,
     #[serde(rename = "LC4404_C_ROOMS")]
-    lc4404_c_rooms: UInt,
+    pub lc4404_c_rooms: UInt,
     #[serde(rename = "LC4405EW_C_BEDROOMS")]
-    lc4405ew_c_bedrooms: UInt,
+    pub lc4405ew_c_bedrooms: UInt,
     #[serde(rename = "LC4408EW_C_PPBROOMHEW11")]
-    lc4408ew_c_ppbroomhew11: Int,
+    pub lc4408ew_c_ppbroomhew11: Int,
     #[serde(rename = "LC4402_C_CENHEATHUK11")]
-    lc4402_c_cenheathuk11: UInt,
+    pub lc4402_c_cenheathuk11: UInt,
     #[serde(rename = "LC4605_C_NSSEC")]
-    lc4605_c_nssec: UInt,
+    pub lc4605_c_nssec: UInt,
     #[serde(rename = "LC4202_C_ETHHUK11")]
-    lc4202_c_ethhuk11: UInt,
+    pub lc4202_c_ethhuk11: UInt,
     #[serde(rename = "LC4202_C_CARSNO")]
-    lc4202_c_carsno: UInt,
+    pub lc4202_c_carsno: UInt,
 }
 
 #[cfg(test)]

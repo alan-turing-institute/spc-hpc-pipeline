@@ -1,28 +1,30 @@
 use crate::config::{Age, Config, Year};
+use crate::household::{Household, HID};
+use crate::person::{Person, PID};
+use anyhow::anyhow;
 use polars::prelude::*;
-use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
+use serde::Deserialize;
+use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
 use typed_index_collections::TiVec;
 const ADULT_AGE: Age = Age(16);
 
 #[derive(Debug)]
 struct Assignment {
-    region: String,
-    year: Year,
-    output_dir: PathBuf,
-    scotland: bool,
-    // h_data: TiVec<Household>,
-    // p_data: TiVec<Person>,
-    h_data: DataFrame,
-    p_data: DataFrame,
-    strictmode: bool,
-    geog_lookup: DataFrame,
-    hrp_dist: HashMap<String, DataFrame>,
-    hrp_index: HashMap<String, Vec<usize>>,
-    partner_hrp_dist: DataFrame,
-    child_hrp_dist: DataFrame,
-    rng: StdRng,
+    pub region: String,
+    pub year: Year,
+    pub output_dir: PathBuf,
+    pub scotland: bool,
+    pub h_data: TiVec<HID, Household>,
+    pub p_data: TiVec<PID, Person>,
+    pub strictmode: bool,
+    pub geog_lookup: DataFrame,
+    pub hrp_dist: HashMap<String, DataFrame>,
+    pub hrp_index: HashMap<String, Vec<usize>>,
+    pub partner_hrp_dist: DataFrame,
+    pub child_hrp_dist: DataFrame,
+    pub rng: StdRng,
 }
 
 fn read_geog_lookup(path: &str) -> anyhow::Result<DataFrame> {
@@ -50,6 +52,58 @@ fn replace_i32(mapping: &HashMap<i32, i32>) -> impl (Fn(&Series) -> Series) + '_
             .collect::<Int32Chunked>()
             .into_series()
     }
+}
+
+fn read_csv<P: AsRef<Path>, K, V: for<'a> Deserialize<'a>>(path: P) -> anyhow::Result<TiVec<K, V>> {
+    Ok(csv::Reader::from_path(path)?
+        .deserialize()
+        .collect::<Result<TiVec<K, V>, _>>()?)
+}
+
+trait HashEth {
+    fn get_eth(&self) -> &i32;
+    fn set_eth(&mut self, eth: i32);
+}
+
+impl HashEth for Person {
+    fn get_eth(&self) -> &i32 {
+        &self.eth
+    }
+    fn set_eth(&mut self, eth: i32) {
+        self.eth = eth;
+    }
+}
+
+impl HashEth for Household {
+    fn get_eth(&self) -> &i32 {
+        &self.lc4202_c_ethhuk11
+    }
+
+    fn set_eth(&mut self, eth: i32) {
+        self.lc4202_c_ethhuk11 = eth;
+    }
+}
+
+fn map_eth<K, V: HashEth>(
+    data: TiVec<K, V>,
+    eth_mapping: &HashMap<i32, i32>,
+) -> anyhow::Result<TiVec<K, V>> {
+    data.into_iter()
+        .map(|mut person| {
+            match eth_mapping
+                // TODO: fix int types
+                .get(person.get_eth())
+                .cloned()
+                .ok_or(anyhow!("Invalid mapping."))
+            {
+                Ok(new_val) => {
+                    person.set_eth(new_val);
+                    Ok(person)
+                }
+                Err(e) => Err(e),
+            }
+        })
+        .collect::<anyhow::Result<TiVec<K, V>>>()
 }
 
 impl Assignment {
@@ -104,11 +158,13 @@ impl Assignment {
             CsvReader::from_path(&format!("{PERSISTENT_DATA}/child_hrp_dist.csv"))?.finish()?;
 
         let scotland = region.starts_with('S');
-        let mut h_data = CsvReader::from_path(h_file.as_os_str())?.finish()?;
-        let mut p_data = CsvReader::from_path(p_file.as_os_str())?.finish()?;
+        // let mut h_data = CsvReader::from_path(h_file.as_os_str())?.finish()?;
+        let mut h_data: TiVec<HID, Household> = read_csv(h_file.as_os_str().to_str().unwrap())?;
+        let mut p_data: TiVec<PID, Person> = read_csv(p_file.as_os_str().to_str().unwrap())?;
+
         // TODO: check the mapping
         if !scotland {
-            let eth_mapping = HashMap::from([
+            let eth_mapping: HashMap<i32, i32> = HashMap::from([
                 (-1, 1),
                 (2, 2),
                 (3, 3),
@@ -130,13 +186,13 @@ impl Assignment {
                 (23, 8),
             ]);
 
-            p_data.apply("DC2101EW_C_ETHPUK11", replace_i32(&eth_mapping))?;
+            p_data = map_eth(p_data, &eth_mapping)?;
         } else {
             // TODO: check the mapping
             let eth_remapping =
                 HashMap::from([(-1, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 8)]);
-            p_data.apply("DC2101EW_C_ETHPUK11", replace_i32(&eth_remapping))?;
-            h_data.apply("LC4202_C_ETHHUK11", replace_i32(&eth_remapping))?;
+            p_data = map_eth(p_data, &eth_remapping)?;
+            h_data = map_eth(h_data, &eth_remapping)?;
         }
 
         Ok(Self {
