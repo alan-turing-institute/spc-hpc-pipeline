@@ -1,8 +1,9 @@
 use crate::config::{Age, Config, Year};
 use polars::prelude::*;
+use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, path::PathBuf};
-
+use typed_index_collections::TiVec;
 const ADULT_AGE: Age = Age(16);
 
 #[derive(Debug)]
@@ -11,6 +12,8 @@ struct Assignment {
     year: Year,
     output_dir: PathBuf,
     scotland: bool,
+    // h_data: TiVec<Household>,
+    // p_data: TiVec<Person>,
     h_data: DataFrame,
     p_data: DataFrame,
     strictmode: bool,
@@ -33,6 +36,21 @@ fn read_geog_lookup(path: &str) -> anyhow::Result<DataFrame> {
 
 // TODO: refine paths
 const PERSISTENT_DATA: &str = "data/microsimulation/persistent_data/";
+
+// See example: https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.apply
+fn replace_i32(mapping: &HashMap<i32, i32>) -> impl (Fn(&Series) -> Series) + '_ {
+    |series: &Series| -> Series {
+        series
+            .cast(&DataType::Int32)
+            .unwrap()
+            .i32()
+            .unwrap()
+            .into_iter()
+            .map(|opt_el: Option<i32>| opt_el.map(|el| *mapping.get(&el).unwrap_or(&el)))
+            .collect::<Int32Chunked>()
+            .into_series()
+    }
+}
 
 impl Assignment {
     pub fn new(region: &str, config: &Config) -> anyhow::Result<Assignment> {
@@ -78,22 +96,56 @@ impl Assignment {
         hrp_index.insert("mix".to_string(), vec![5]);
 
         // # distribution of partner age/sex/eth by HRP age/sex/eth
-        // self.partner_hrp_dist = pd.read_csv("./persistent_data/partner_hrp_dist.csv")
-
         let partner_hrp_dist =
             CsvReader::from_path(&format!("{PERSISTENT_DATA}/partner_hrp_dist.csv"))?.finish()?;
+
         // # distribution of child age/sex/eth by HRP age/sex/eth
-        // self.child_hrp_dist = pd.read_csv("./persistent_data/child_hrp_dist.csv")
         let child_hrp_dist =
             CsvReader::from_path(&format!("{PERSISTENT_DATA}/child_hrp_dist.csv"))?.finish()?;
+
+        let scotland = region.starts_with('S');
+        let mut h_data = CsvReader::from_path(h_file.as_os_str())?.finish()?;
+        let mut p_data = CsvReader::from_path(p_file.as_os_str())?.finish()?;
+        // TODO: check the mapping
+        if !scotland {
+            let eth_mapping = HashMap::from([
+                (-1, 1),
+                (2, 2),
+                (3, 3),
+                (4, 4),
+                (5, 4),
+                (7, 5),
+                (8, 5),
+                (9, 5),
+                (10, 5),
+                (12, 6),
+                (13, 6),
+                (14, 6),
+                (15, 6),
+                (16, 6),
+                (18, 7),
+                (19, 7),
+                (20, 7),
+                (22, 8),
+                (23, 8),
+            ]);
+
+            p_data.apply("DC2101EW_C_ETHPUK11", replace_i32(&eth_mapping))?;
+        } else {
+            // TODO: check the mapping
+            let eth_remapping =
+                HashMap::from([(-1, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 8)]);
+            p_data.apply("DC2101EW_C_ETHPUK11", replace_i32(&eth_remapping))?;
+            h_data.apply("LC4202_C_ETHHUK11", replace_i32(&eth_remapping))?;
+        }
 
         Ok(Self {
             region: region.to_owned(),
             year: config.year.to_owned(),
             output_dir: config.data_dir.to_owned(),
-            scotland: region.starts_with('S'),
-            h_data: CsvReader::from_path(h_file.as_os_str())?.finish()?,
-            p_data: CsvReader::from_path(p_file.as_os_str())?.finish()?,
+            scotland,
+            h_data,
+            p_data,
             strictmode: config.strict,
             geog_lookup,
             hrp_dist,
@@ -102,6 +154,27 @@ impl Assignment {
             child_hrp_dist,
             rng: StdRng::seed_from_u64(0),
         })
+    }
+
+    fn sample_hrp(&self, msoa: &str, oas: &[String]) -> anyhow::Result<()> {
+        // let h_ref = self.h_data.filter(col("Area"))
+
+        // TODO: fix types
+        let hh_type = "sgl".to_string();
+
+        // let sample = self
+        //     .hrp_dist
+        //     .get(&hh_type)
+        //     .unwrap()
+        //     .select(col("n"))?
+        //     .iter();
+        // .sample_n_literal(10, true, true, Some(0))?;
+
+        todo!()
+    }
+
+    pub fn run(&self) {
+        todo!()
     }
 }
 
