@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::Eth;
+
 type MSOA = String;
 type UInt = i32;
 type Int = i32;
@@ -45,7 +47,7 @@ pub struct Household {
     #[serde(rename = "LC4605_C_NSSEC")]
     pub lc4605_c_nssec: UInt,
     #[serde(rename = "LC4202_C_ETHHUK11")]
-    pub lc4202_c_ethhuk11: UInt,
+    pub lc4202_c_ethhuk11: Eth,
     #[serde(rename = "LC4202_C_CARSNO")]
     pub lc4202_c_carsno: UInt,
 }

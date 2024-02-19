@@ -40,15 +40,6 @@ impl std::fmt::Display for Year {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Age(pub YearInt);
-
-impl std::fmt::Display for Age {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub person_resolution: Resolution,

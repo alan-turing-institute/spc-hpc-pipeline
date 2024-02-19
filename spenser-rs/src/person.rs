@@ -1,6 +1,7 @@
+use crate::{Age, Eth, Sex};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PID(pub usize);
 impl std::fmt::Display for PID {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -13,38 +14,67 @@ impl From<usize> for PID {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Hash)]
+impl From<PID> for usize {
+    fn from(value: PID) -> Self {
+        value.0
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Person {
     #[serde(rename = "PID")]
     pub pid: usize,
     #[serde(rename = "Area")]
     pub area: String,
     #[serde(rename = "DC1117EW_C_SEX")]
-    pub sex: usize,
+    pub sex: Sex,
     #[serde(rename = "DC1117EW_C_AGE")]
-    pub age: usize,
+    pub age: Age,
     #[serde(rename = "DC2101EW_C_ETHPUK11")]
-    pub eth: i32,
+    pub eth: Eth,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct HRPID(pub usize);
 impl std::fmt::Display for HRPID {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "HRPID #{}", self.0)
     }
 }
+impl From<usize> for HRPID {
+    fn from(value: usize) -> Self {
+        Self(value)
+    }
+}
+impl From<HRPID> for usize {
+    fn from(value: HRPID) -> Self {
+        value.0
+    }
+}
 
-#[derive(Serialize, Deserialize, Debug, Hash)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HRPerson {
     #[serde(rename = "age")]
-    pub age: usize,
+    pub age: Age,
     #[serde(rename = "sex")]
-    pub sex: usize,
+    pub sex: Option<Sex>,
     #[serde(rename = "ethhuk11")]
-    pub eth: usize,
+    pub eth: Eth,
     pub n: usize,
 }
+// age,agehrp,ethnicityew,ethhuk11,n,samesex
+// 17,17,2,2,1,FALSE
+
+// #[derive(Serialize, Deserialize, Debug, Hash)]
+// pub struct PartnerHRPerson {
+//     #[serde(rename = "age")]
+//     pub age: usize,
+//     #[serde(rename = "age")]
+//     pub age: usize,
+//     #[serde(rename = "ethhuk11")]
+//     pub eth: usize,
+//     pub n: usize,
+// }
 
 #[cfg(test)]
 mod tests {
