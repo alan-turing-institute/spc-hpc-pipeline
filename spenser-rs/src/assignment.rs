@@ -261,57 +261,69 @@ impl Assignment {
             let hrp_dist = self.hrp_dist.get(&hh_type).unwrap();
             let weighted_idx = WeightedIndex::new(hrp_dist.iter().map(|hrp| hrp.n)).unwrap();
             let idxs = self.hrp_index.get(&hh_type).unwrap();
-            let href: Vec<_> = self
+            let h_ref: Vec<_> = self
                 .h_data
-                .iter()
+                .iter_mut()
                 .filter(|household| {
-                    idxs.contains(&household.lc4408_c_ahthuk11) && oas.contains(&household.area)
+                    idxs.contains(&household.lc4408_c_ahthuk11)
+                        && oas.contains(&household.area)
+                        && household.hrpid.is_none()
                 })
                 .collect();
 
             // Get sample of HRPs
-            let sample = (0..href.len()).fold(Vec::new(), |mut acc, _| {
+            let sample = (0..h_ref.len()).fold(Vec::new(), |mut acc, _| {
                 let hrpid = HRPID(weighted_idx.sample(&mut self.rng));
                 let el = hrp_dist.get(hrpid).unwrap();
                 acc.push((hrpid.to_owned(), el));
-                // println!("{:?}", el);
                 acc
             });
 
             // Construct queues of matches
-            // NB. BTreeMap needed for deterministic shuffling upon iterating
+            // ---
+            // Performance notes:
+            //
+            // - BTreeMap needed for deterministic shuffling upon iterating
             // HashMap lookups much faster (~2x), consider getting list of sorted keys instead for
             // the shuffle instead and revert to hashmap to get this performance improvement.
-            let mut people_by_area_ase: BTreeMap<(&str, Age, Sex, Eth), Vec<PID>> = BTreeMap::new();
-            let mut adults_by_area_se: BTreeMap<(&str, Sex, Eth), Vec<PID>> = BTreeMap::new();
-            let mut adults_by_area_s: BTreeMap<(&str, Sex), Vec<PID>> = BTreeMap::new();
-            let mut adults_by_area: BTreeMap<&str, Vec<PID>> = BTreeMap::new();
+            //
+            // - String type is used in the lookups. Using &str would be better but there is an
+            //   issue with a mutable borrow of person during the assignment of household. An
+            //   alternative to String is to use &str and keep a map of PIDs to update after
+            //   sampling. This is around (~1.5x).
+            // ---
+            let mut people_by_area_ase: BTreeMap<(String, Age, Sex, Eth), Vec<PID>> =
+                BTreeMap::new();
+            let mut adults_by_area_se: BTreeMap<(String, Sex, Eth), Vec<PID>> = BTreeMap::new();
+            let mut adults_by_area_s: BTreeMap<(String, Sex), Vec<PID>> = BTreeMap::new();
+            let mut adults_by_area: BTreeMap<String, Vec<PID>> = BTreeMap::new();
+
             self.p_data.iter_enumerated().for_each(|(idx, person)| {
-                let area = &person.area;
+                let area = person.area.to_owned();
                 let age = person.age;
                 let sex = person.sex;
                 let eth = person.eth;
                 people_by_area_ase
-                    .entry((area, age, sex, eth))
+                    .entry((area.clone(), age, sex, eth))
                     .and_modify(|el| {
                         el.push(idx);
                     })
                     .or_insert(vec![idx]);
                 if age > ADULT_AGE {
                     adults_by_area_se
-                        .entry((area, sex, eth))
+                        .entry((area.clone(), sex, eth))
                         .and_modify(|el| {
                             el.push(idx);
                         })
                         .or_insert(vec![idx]);
                     adults_by_area_s
-                        .entry((area, sex))
+                        .entry((area.clone(), sex))
                         .and_modify(|el| {
                             el.push(idx);
                         })
                         .or_insert(vec![idx]);
                     adults_by_area
-                        .entry(area)
+                        .entry(area.clone())
                         .and_modify(|el| {
                             el.push(idx);
                         })
@@ -334,7 +346,7 @@ impl Assignment {
                 .for_each(|(_, v)| v.shuffle(&mut self.rng));
 
             // Loop over sample HRPs and match PIDs
-            for (_, sample_person) in sample {
+            for ((_, sample_person), household) in sample.iter().zip(h_ref) {
                 // Demographics
                 let area = msoa;
                 let age = sample_person.age;
@@ -345,13 +357,13 @@ impl Assignment {
 
                 // Try exact match over unmatched
                 let mut pid = None;
-                if let Some(v) = people_by_area_ase.get_mut(&(area, age, sex, eth)) {
+                if let Some(v) = people_by_area_ase.get_mut(&(area.to_owned(), age, sex, eth)) {
                     pid = update_pid_vec(v, &mut self.matched, &mut self.unmatched);
-                } else if let Some(v) = adults_by_area_se.get_mut(&(area, sex, eth)) {
+                } else if let Some(v) = adults_by_area_se.get_mut(&(area.to_owned(), sex, eth)) {
                     pid = update_pid_vec(v, &mut self.matched, &mut self.unmatched);
-                } else if let Some(v) = adults_by_area_s.get_mut(&(area, sex)) {
+                } else if let Some(v) = adults_by_area_s.get_mut(&(area.to_owned(), sex)) {
                     pid = update_pid_vec(v, &mut self.matched, &mut self.unmatched);
-                } else if let Some(v) = adults_by_area.get_mut(&area) {
+                } else if let Some(v) = adults_by_area.get_mut(&area.to_owned()) {
                     // Custom algorithm to get PID with smallest difference in age
                     if !v.is_empty() {
                         // TODO: this is slow as O(N)
@@ -378,6 +390,13 @@ impl Assignment {
                     }
                 }
                 if let Some(pid) = pid {
+                    // Assign pid to household
+                    household.hrpid = Some(pid);
+                    // Assign household to person
+                    self.p_data
+                        .get_mut(pid)
+                        .unwrap_or_else(|| panic!("Invalid {pid}"))
+                        .hid = Some(HID(household.hid.to_owned() as usize));
                     println!(
                         "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                         self.unmatched.len(),
@@ -392,48 +411,6 @@ impl Assignment {
             }
         }
         Ok(())
-    }
-
-    fn get_closest_adult<'a>(
-        &mut self,
-        area: &'a str,
-        age: &Age,
-        sex: &Sex,
-        eth: &Eth,
-        adults_by_area_se: &mut HashMap<(&'a str, Sex, Eth), HashSet<PID>>,
-        adults_by_area_s: &mut HashMap<(&'a str, Sex), HashSet<PID>>,
-        adults_by_area: &mut HashMap<&'a str, HashSet<PID>>,
-    ) -> Option<PID> {
-        if let Some(hs) = adults_by_area_se.get_mut(&(area, *sex, *eth)) {
-            if !hs.is_empty() {
-                let el = hs.iter().next().unwrap().to_owned();
-                self.unmatched.remove(&el);
-                hs.remove(&el);
-                Some(el)
-            } else {
-                None
-            }
-        } else if let Some(hs) = adults_by_area_s.get_mut(&(area, *sex)) {
-            if !hs.is_empty() {
-                let el = hs.iter().next().unwrap().to_owned();
-                self.unmatched.remove(&el);
-                hs.remove(&el);
-                Some(el)
-            } else {
-                None
-            }
-        } else if let Some(hs) = adults_by_area.get_mut(&area) {
-            if !hs.is_empty() {
-                let el = hs.iter().next().unwrap().to_owned();
-                self.unmatched.remove(&el);
-                hs.remove(&el);
-                Some(el)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
     }
 
     pub fn run(&self) {

@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::Eth;
+use crate::{
+    person::{HRPID, PID},
+    Eth,
+};
 
 type MSOA = String;
 type UInt = i32;
 type Int = i32;
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HID(pub usize);
 impl std::fmt::Display for HID {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -50,6 +53,8 @@ pub struct Household {
     pub lc4202_c_ethhuk11: Eth,
     #[serde(rename = "LC4202_C_CARSNO")]
     pub lc4202_c_carsno: UInt,
+    #[serde(rename = "HRPID")]
+    pub hrpid: Option<PID>,
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
-use crate::{Age, Eth, Sex};
+use crate::{household::HID, Age, Eth, Sex};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct PID(pub usize);
 impl std::fmt::Display for PID {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -32,9 +32,11 @@ pub struct Person {
     pub age: Age,
     #[serde(rename = "DC2101EW_C_ETHPUK11")]
     pub eth: Eth,
+    #[serde(rename = "HID")]
+    pub hid: Option<HID>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct HRPID(pub usize);
 impl std::fmt::Display for HRPID {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
