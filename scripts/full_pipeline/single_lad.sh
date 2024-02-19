@@ -30,7 +30,7 @@ cd submodules/household_microsynth
 # successful run for Scotland.
 
 export NO_CACHE=false
-python -W ignore scripts/run_microsynth.py $var OA11
+hyperfine -M 1 "python -W ignore scripts/run_microsynth.py ${var} OA11"
 
 echo 'Moving to run microsimulation'
 cd ..
@@ -43,25 +43,25 @@ cd microsimulation
 # with setting as NO_CACHE=true. So it is set here so that all England, Wales and
 # Scotland may run with single script.
 export NO_CACHE=true
-python -W ignore scripts/run_ssm.py -c config/ssm_current.json $var
+hyperfine -M 1 "python -W ignore scripts/run_ssm.py -c config/ssm_current.json ${var}"
 
 echo 'Step 2'
-python -W ignore scripts/run_ssm_h.py -c config/ssm_h_current.json $var
+hyperfine -M 1 "python -W ignore scripts/run_ssm_h.py -c config/ssm_h_current.json ${var}"
 
 echo 'Running assigment for 2012'
-python -W ignore scripts/run_assignment.py -c config/ass_current_2012.json $var
+hyperfine -M 1 "python -W ignore scripts/run_assignment.py -c config/ass_current_2012.json ${var}"
 
 echo 'Running assigment for 2020'
-python -W ignore  scripts/run_assignment.py -c config/ass_current_2020.json $var
+hyperfine -M 1 "python -W ignore  scripts/run_assignment.py -c config/ass_current_2020.json ${var}"
 
 echo 'Running assigment for 2022'
-python -W ignore scripts/run_assignment.py -c config/ass_current_2022.json $var
+hyperfine -M 1 "python -W ignore scripts/run_assignment.py -c config/ass_current_2022.json ${var}"
 
 echo 'Running assigment for 2032'
-python -W ignore scripts/run_assignment.py -c config/ass_current_2032.json $var
+hyperfine -M 1 "python -W ignore scripts/run_assignment.py -c config/ass_current_2032.json ${var}"
 
 echo 'Running assigment for 2039'
-python -W ignore scripts/run_assignment.py -c config/ass_current_2039.json $var
+hyperfine -M 1 "python -W ignore scripts/run_assignment.py -c config/ass_current_2039.json ${var}"
 
 echo "Done with: $var"
 
