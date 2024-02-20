@@ -1,4 +1,4 @@
-use crate::{household::HID, Age, Eth, Sex};
+use crate::{household::HID, Age, Eth, EthEW, Sex};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -64,19 +64,36 @@ pub struct HRPerson {
     pub eth: Eth,
     pub n: usize,
 }
-// age,agehrp,ethnicityew,ethhuk11,n,samesex
-// 17,17,2,2,1,FALSE
 
-// #[derive(Serialize, Deserialize, Debug, Hash)]
-// pub struct PartnerHRPerson {
-//     #[serde(rename = "age")]
-//     pub age: usize,
-//     #[serde(rename = "age")]
-//     pub age: usize,
-//     #[serde(rename = "ethhuk11")]
-//     pub eth: usize,
-//     pub n: usize,
-// }
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PartnerHRPerson {
+    #[serde(rename = "age")]
+    pub age: Age,
+    #[serde(rename = "agehrp")]
+    pub agehrp: Age,
+    #[serde(rename = "ethnicityew")]
+    pub ethnicityew: EthEW,
+    #[serde(rename = "ethhuk11")]
+    pub eth: Eth,
+    #[serde(rename = "n")]
+    pub n: usize,
+    #[serde(rename = "samesex")]
+    #[serde(deserialize_with = "deserialize_bool")]
+    pub samesex: bool,
+}
+
+// See:
+fn deserialize_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+    match s.to_lowercase().as_str() {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err(serde::de::Error::unknown_variant(s, &["TRUE", "FALSE"])),
+    }
+}
 
 #[cfg(test)]
 mod tests {

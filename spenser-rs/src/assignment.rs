@@ -2,10 +2,12 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
-use crate::config::{Config, Year};
-use crate::household::{Household, HID};
-use crate::person::{HRPerson, Person, HRPID, PID};
-use crate::{Age, Eth, Sex};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::Read,
+    path::{Path, PathBuf},
+};
+
 use anyhow::anyhow;
 use hashbrown::HashSet;
 use polars::prelude::*;
@@ -13,11 +15,12 @@ use rand::distributions::{Distribution, WeightedIndex};
 use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::Deserialize;
-use std::collections::BTreeMap;
-use std::io::Read;
-use std::path::Path;
-use std::{collections::HashMap, path::PathBuf};
 use typed_index_collections::TiVec;
+
+use crate::config::{Config, Year};
+use crate::household::{Household, HID};
+use crate::person::{HRPerson, PartnerHRPerson, Person, HRPID, PID};
+use crate::{Age, Eth, Sex};
 
 const ADULT_AGE: Age = Age(16);
 
@@ -38,7 +41,7 @@ struct Assignment {
     pub geog_lookup: DataFrame,
     pub hrp_dist: BTreeMap<String, TiVec<HRPID, HRPerson>>,
     pub hrp_index: BTreeMap<String, Vec<i32>>,
-    pub partner_hrp_dist: TiVec<HRPID, HRPerson>,
+    pub partner_hrp_dist: TiVec<HRPID, PartnerHRPerson>,
     pub child_hrp_dist: TiVec<HRPID, HRPerson>,
     pub rng: StdRng,
     pub unmatched: HashSet<PID>,
@@ -253,6 +256,50 @@ impl Assignment {
         })
     }
 
+    fn sample_partner(&mut self, msoa: &str, oas: &HashSet<String>) -> anyhow::Result<()> {
+        let h2_ref: Vec<_> = self
+            .h_data
+            .iter_mut()
+            .filter(|household| {
+                [2, 3].contains(&household.lc4408_c_ahthuk11)
+                    && oas.contains(&household.area)
+                    && household.filled != Some(true)
+            })
+            .collect();
+
+        let mut dist_by_ae = HashMap::new();
+        self.partner_hrp_dist
+            .iter()
+            .map(|partner| {
+                if dist_by_ae
+                    .insert((partner.agehrp, partner.eth), partner.n)
+                    .is_some()
+                {
+                    Err(anyhow!("Duplicate key: {partner:?}"))
+                } else {
+                    Ok(())
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        for household in h2_ref {
+            let hrpid = household.hrpid.expect("Household is not assigned a PID");
+            let hrp = self.p_data.get(hrpid).expect("Invalid HRPID");
+            let hrp_sex = hrp.sex;
+            let hrp_age = hrp.age;
+            let hrp_eth = hrp.eth;
+
+            // // Get sample of representative partners
+            // let sample = (0..h_ref.len()).fold(Vec::new(), |mut acc, _| {
+            //     let hrpid = HRPID(weighted_idx.sample(&mut self.rng));
+            //     let el = hrp_dist.get(hrpid).unwrap();
+            //     acc.push((hrpid.to_owned(), el));
+            //     acc
+            // });
+        }
+
+        Ok(())
+    }
     fn sample_hrp(&mut self, msoa: &str, oas: &HashSet<String>) -> anyhow::Result<()> {
         for hh_type in ["sgl", "cpl", "sp", "mix"]
             .into_iter()
@@ -397,6 +444,11 @@ impl Assignment {
                         .get_mut(pid)
                         .unwrap_or_else(|| panic!("Invalid {pid}"))
                         .hid = Some(HID(household.hid.to_owned() as usize));
+
+                    // If single person household, filled
+                    if household.lc4408_c_ahthuk11 == 1 {
+                        household.filled = Some(true)
+                    }
                     println!(
                         "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                         self.unmatched.len(),

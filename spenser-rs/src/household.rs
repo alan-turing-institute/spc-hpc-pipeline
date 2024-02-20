@@ -26,6 +26,7 @@ pub struct Household {
     #[serde(rename = "HID")]
     pub hid: Int,
     #[serde(rename = "Area")]
+    // TODO: should be OA? Use import of wrapper types instead.
     pub area: MSOA,
     #[serde(rename = "LC4402_C_TYPACCOM")]
     pub lc4402_c_typaccom: UInt,
@@ -55,6 +56,8 @@ pub struct Household {
     pub lc4202_c_carsno: UInt,
     #[serde(rename = "HRPID")]
     pub hrpid: Option<PID>,
+    #[serde(rename = "FILLED")]
+    pub filled: Option<bool>,
 }
 
 #[cfg(test)]
