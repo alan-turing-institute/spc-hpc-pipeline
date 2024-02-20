@@ -5,6 +5,15 @@ pub mod config;
 pub mod household;
 pub mod person;
 
+macro_rules! return_some {
+    ($arg:expr) => {
+        if $arg.is_some() {
+            return $arg;
+        }
+    };
+}
+pub(crate) use return_some;
+
 // TODO: use type instead of string in assignment
 #[derive(Hash, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 struct MSOA(String);
@@ -38,6 +47,12 @@ impl From<String> for OA {
 #[derive(Hash, Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Sex(pub usize);
 
+impl Sex {
+    fn opposite(&self) -> Self {
+        Self(3 - self.0)
+    }
+}
+
 #[derive(Hash, Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Age(pub usize);
 
@@ -50,6 +65,12 @@ pub struct EthEW(pub i32);
 impl From<i32> for Eth {
     fn from(value: i32) -> Self {
         Self(value)
+    }
+}
+
+impl From<EthEW> for Eth {
+    fn from(value: EthEW) -> Self {
+        Self(value.0)
     }
 }
 
