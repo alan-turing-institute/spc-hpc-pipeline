@@ -4,6 +4,7 @@ pub mod assignment;
 pub mod config;
 pub mod household;
 pub mod person;
+pub(crate) mod queues;
 
 macro_rules! return_some {
     ($arg:expr) => {
@@ -13,6 +14,8 @@ macro_rules! return_some {
     };
 }
 pub(crate) use return_some;
+
+const ADULT_AGE: Age = Age(16);
 
 // TODO: use type instead of string in assignment
 #[derive(Hash, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
