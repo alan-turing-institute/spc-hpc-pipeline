@@ -17,14 +17,17 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::Deserialize;
 use typed_index_collections::TiVec;
 
-use crate::person::{HRPerson, PartnerHRPerson, Person, HRPID, PID};
 use crate::{
     config::{Config, Year},
-    return_some,
+    return_some, OA,
 };
 use crate::{
     household::{Household, HID},
     queues::Queues,
+};
+use crate::{
+    person::{HRPerson, PartnerHRPerson, Person, HRPID, PID},
+    MSOA,
 };
 use crate::{Age, Eth, Sex};
 
@@ -240,8 +243,8 @@ impl Assignment {
 
     fn sample_hrp(
         &mut self,
-        msoa: &str,
-        oas: &HashSet<String>,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
         for hh_type in ["sgl", "cpl", "sp", "mix"]
@@ -256,7 +259,7 @@ impl Assignment {
                 .iter_mut()
                 .filter(|household| {
                     idxs.contains(&household.lc4408_c_ahthuk11)
-                        && oas.contains(&household.area)
+                        && oas.contains(&household.oa)
                         && household.hrpid.is_none()
                 })
                 .collect();
@@ -272,7 +275,6 @@ impl Assignment {
             // Loop over sample HRPs and match PIDs
             for ((_, sample_person), household) in sample.iter().zip(h_ref) {
                 // Demographics
-                let area = msoa;
                 let age = sample_person.age;
                 let sex = sample_person
                     .sex
@@ -280,7 +282,7 @@ impl Assignment {
                 let eth = sample_person.eth;
 
                 // Try exact match over unmatched
-                if let Some(pid) = queues.sample_adult(area, age, sex, eth, &self.p_data) {
+                if let Some(pid) = queues.sample_adult(&msoa, age, sex, eth, &self.p_data) {
                     // Assign pid to household
                     household.hrpid = Some(pid);
                     // Assign household to person
@@ -310,8 +312,8 @@ impl Assignment {
 
     fn sample_partner(
         &mut self,
-        area: &str,
-        oas: &HashSet<String>,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
         let h2_ref: Vec<_> = self
@@ -319,7 +321,7 @@ impl Assignment {
             .iter_mut()
             .filter(|household| {
                 [2, 3].contains(&household.lc4408_c_ahthuk11)
-                    && oas.contains(&household.area)
+                    && oas.contains(&household.oa)
                     && household.filled != Some(true)
             })
             .collect();
@@ -390,7 +392,7 @@ impl Assignment {
             let eth: Eth = partner_sample.ethnicityew.into();
 
             // Sample a HR person
-            if let Some(pid) = queues.sample_adult(area, age, sex, eth, &self.p_data) {
+            if let Some(pid) = queues.sample_adult(msoa, age, sex, eth, &self.p_data) {
                 // Assign pid to household
                 household.hrpid = Some(pid);
                 // Assign household to person
@@ -420,16 +422,75 @@ impl Assignment {
         Ok(())
     }
 
+    // self.h_data.LC4404_C_SIZHUK11 == nocc
+    fn sample_single_parent_child(
+        &mut self,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
+        nocc: usize,
+        mark_filled: bool,
+        queues: &mut Queues,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+    // TODO: add defs
+    fn sample_couple_child(
+        &mut self,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
+        nocc: usize,
+        mark_filled: bool,
+        queues: &mut Queues,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn fill_multi(
+        &mut self,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
+        nocc: usize,
+        mark_filled: bool,
+        queues: &mut Queues,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+    fn fill_communal(
+        &mut self,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
+        queues: &mut Queues,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+    fn assign_surplus_adults(
+        &mut self,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
+        queues: &mut Queues,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn assign_surplus_children(
+        &mut self,
+        msoa: &MSOA,
+        oas: &HashSet<OA>,
+        queues: &mut Queues,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+
     // TODO: add type for LAD
     pub fn run(&mut self) -> anyhow::Result<()> {
         // Create queues
         let mut queues = Queues::new(&self.p_data, &mut self.rng);
 
         // Deterministic ordering
-        let msoas: BTreeSet<String> = self
+        let msoas: BTreeSet<MSOA> = self
             .p_data
             .iter()
-            .map(|person| person.area.to_owned())
+            .map(|person| person.msoa.to_owned())
             .collect();
 
         for msoa in msoas.iter() {
@@ -437,25 +498,77 @@ impl Assignment {
                 .geog_lookup
                 .clone()
                 .lazy()
-                .filter(col("msoa").eq(lit(msoa.to_owned())))
+                .filter(col("msoa").eq(lit(String::from(msoa.to_owned()))))
                 .select([col("oa")])
                 .collect()?;
-            let oas: HashSet<String> = oas
+            let oas: HashSet<OA> = oas
                 .iter()
                 .next()
                 .unwrap()
                 .str()?
                 .into_iter()
-                .map(|el| el.unwrap().to_owned())
+                .map(|el| el.unwrap().to_owned().into())
                 .collect();
             println!("{:?}", msoa);
             println!("{:?}", oas);
-
+            input();
             // Sample HRP
+            println!("assigning HRPs");
             self.sample_hrp(msoa, &oas, &mut queues)?;
+            // self.stats();
 
             // Sample partner
+            // TODO: check all partners assigned (from python)
+            println!("assigning partners to HRPs where appropriate");
             self.sample_partner(msoa, &oas, &mut queues)?;
+            // self.stats()
+
+            // // self.__sample_single_parent_child(msoa, oas, 2, mark_filled=True)
+            // self.sample_single_parent_child(msoa, &oas, 2, true, &mut queues)?;
+            // // self.stats()
+
+            // // self.__sample_single_parent_child(msoa, oas, 3, mark_filled=True)
+            // self.sample_single_parent_child(msoa, &oas, 3, true, &mut queues)?;
+            // // self.stats()
+
+            // // print("assigning child 3 to single-parent households")
+            // // self.__sample_single_parent_child(msoa, oas, 4, mark_filled=False)
+            // self.sample_single_parent_child(msoa, &oas, 4, true, &mut queues)?;
+            // // self.stats()
+
+            // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
+            // println!("assigning child 1 to couple households");
+            // // self.__sample_couple_child(msoa, oas, 3, mark_filled=True)
+            // self.sample_couple_child(msoa, &oas, 3, true, &mut queues)?;
+            // // self.stats()
+
+            // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
+            // println!("assigning child 2 to single-parent households");
+            // // self.__sample_couple_child(msoa, oas, 4, mark_filled=False)
+            // self.sample_couple_child(msoa, &oas, 3, false, &mut queues)?;
+            // // self.stats()
+
+            // println!("multi-person households");
+            // // self.__fill_multi(msoa, oas, 2)
+            // self.fill_multi(msoa, &oas, 2, true, &mut queues)?;
+            // // self.__fill_multi(msoa, oas, 3)
+            // self.fill_multi(msoa, &oas, 3, true, &mut queues)?;
+            // // self.__fill_multi(msoa, oas, 4, mark_filled=False)
+            // self.fill_multi(msoa, &oas, 4, false, &mut queues)?;
+            // // self.stats()
+
+            // println!("assigning people to communal establishments");
+            // // self.__fill_communal(msoa, oas)
+            // self.fill_communal(msoa, &oas, &mut queues)?;
+            // // self.stats()
+
+            // println!("assigning surplus adults");
+            // self.assign_surplus_adults(msoa, &oas, &mut queues)?;
+            // // self.stats()
+
+            // println!("assigning surplus children");
+            // self.assign_surplus_children(msoa, &oas, &mut queues)?;
+            // // self.stats()
         }
 
         Ok(())

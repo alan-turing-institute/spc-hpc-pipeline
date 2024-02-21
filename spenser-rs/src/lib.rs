@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use serde::{Deserialize, Serialize};
 
 pub mod assignment;
@@ -19,7 +21,7 @@ const ADULT_AGE: Age = Age(16);
 
 // TODO: use type instead of string in assignment
 #[derive(Hash, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-struct MSOA(String);
+pub struct MSOA(String);
 
 impl From<&str> for MSOA {
     fn from(value: &str) -> Self {
@@ -32,9 +34,22 @@ impl From<String> for MSOA {
     }
 }
 
+impl From<MSOA> for String {
+    fn from(value: MSOA) -> Self {
+        value.0
+    }
+}
+
+impl Deref for MSOA {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 // TODO: use type instead of string in assignment
 #[derive(Hash, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-struct OA(String);
+pub struct OA(String);
 
 impl From<&str> for OA {
     fn from(value: &str) -> Self {

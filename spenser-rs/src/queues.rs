@@ -6,7 +6,7 @@ use typed_index_collections::TiVec;
 
 use crate::{
     person::{Person, PID},
-    return_some, Age, Eth, Sex, ADULT_AGE,
+    return_some, Age, Eth, Sex, ADULT_AGE, MSOA,
 };
 
 fn update_pid_vec(
@@ -28,10 +28,10 @@ fn update_pid_vec(
 pub struct Queues {
     pub unmatched: HashSet<PID>,
     pub matched: HashSet<PID>,
-    people_by_area_ase: BTreeMap<(String, Age, Sex, Eth), Vec<PID>>,
-    adults_by_area_se: BTreeMap<(String, Sex, Eth), Vec<PID>>,
-    adults_by_area_s: BTreeMap<(String, Sex), Vec<PID>>,
-    adults_by_area: BTreeMap<String, Vec<PID>>,
+    people_by_area_ase: BTreeMap<(MSOA, Age, Sex, Eth), Vec<PID>>,
+    adults_by_area_se: BTreeMap<(MSOA, Sex, Eth), Vec<PID>>,
+    adults_by_area_s: BTreeMap<(MSOA, Sex), Vec<PID>>,
+    adults_by_area: BTreeMap<MSOA, Vec<PID>>,
 }
 
 impl Queues {
@@ -50,13 +50,13 @@ impl Queues {
     // ---
     pub fn new(p_data: &TiVec<PID, Person>, rng: &mut StdRng) -> Self {
         let unmatched = p_data.iter_enumerated().map(|(idx, _)| idx).collect();
-        let mut people_by_area_ase: BTreeMap<(String, Age, Sex, Eth), Vec<PID>> = BTreeMap::new();
-        let mut adults_by_area_se: BTreeMap<(String, Sex, Eth), Vec<PID>> = BTreeMap::new();
-        let mut adults_by_area_s: BTreeMap<(String, Sex), Vec<PID>> = BTreeMap::new();
-        let mut adults_by_area: BTreeMap<String, Vec<PID>> = BTreeMap::new();
+        let mut people_by_area_ase: BTreeMap<(MSOA, Age, Sex, Eth), Vec<PID>> = BTreeMap::new();
+        let mut adults_by_area_se: BTreeMap<(MSOA, Sex, Eth), Vec<PID>> = BTreeMap::new();
+        let mut adults_by_area_s: BTreeMap<(MSOA, Sex), Vec<PID>> = BTreeMap::new();
+        let mut adults_by_area: BTreeMap<MSOA, Vec<PID>> = BTreeMap::new();
 
         p_data.iter_enumerated().for_each(|(idx, person)| {
-            let area = person.area.to_owned();
+            let area = person.msoa.to_owned();
             let age = person.age;
             let sex = person.sex;
             let eth = person.eth;
@@ -112,7 +112,7 @@ impl Queues {
 
     pub fn sample_adult(
         &mut self,
-        area: &str,
+        msoa: &MSOA,
         age: Age,
         sex: Sex,
         eth: Eth,
@@ -121,20 +121,20 @@ impl Queues {
         let mut pid = None;
         if let Some(v) = self
             .people_by_area_ase
-            .get_mut(&(area.to_owned(), age, sex, eth))
+            .get_mut(&(msoa.to_owned(), age, sex, eth))
         {
             pid = update_pid_vec(v, &mut self.matched, &mut self.unmatched);
             return_some!(pid);
         }
-        if let Some(v) = self.adults_by_area_se.get_mut(&(area.to_owned(), sex, eth)) {
+        if let Some(v) = self.adults_by_area_se.get_mut(&(msoa.to_owned(), sex, eth)) {
             pid = update_pid_vec(v, &mut self.matched, &mut self.unmatched);
             return_some!(pid);
         }
-        if let Some(v) = self.adults_by_area_s.get_mut(&(area.to_owned(), sex)) {
+        if let Some(v) = self.adults_by_area_s.get_mut(&(msoa.to_owned(), sex)) {
             pid = update_pid_vec(v, &mut self.matched, &mut self.unmatched);
             return_some!(pid);
         }
-        if let Some(v) = self.adults_by_area.get_mut(&area.to_owned()) {
+        if let Some(v) = self.adults_by_area.get_mut(&msoa.to_owned()) {
             // Custom algorithm to get PID with smallest difference in age
             if !v.is_empty() {
                 // TODO: this is slow as O(N)

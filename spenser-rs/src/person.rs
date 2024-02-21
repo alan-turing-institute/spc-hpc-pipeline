@@ -1,4 +1,4 @@
-use crate::{household::HID, Age, Eth, EthEW, Sex};
+use crate::{household::HID, Age, Eth, EthEW, Sex, MSOA};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -25,7 +25,7 @@ pub struct Person {
     #[serde(rename = "PID")]
     pub pid: usize,
     #[serde(rename = "Area")]
-    pub area: String,
+    pub msoa: MSOA,
     #[serde(rename = "DC1117EW_C_SEX")]
     pub sex: Sex,
     #[serde(rename = "DC1117EW_C_AGE")]

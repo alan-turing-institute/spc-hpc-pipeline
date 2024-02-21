@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     person::{HRPID, PID},
-    Eth,
+    Eth, OA,
 };
 
 type MSOA = String;
@@ -27,7 +27,7 @@ pub struct Household {
     pub hid: Int,
     #[serde(rename = "Area")]
     // TODO: should be OA? Use import of wrapper types instead.
-    pub area: MSOA,
+    pub oa: OA,
     #[serde(rename = "LC4402_C_TYPACCOM")]
     pub lc4402_c_typaccom: UInt,
     #[serde(rename = "QS420_CELL")]
