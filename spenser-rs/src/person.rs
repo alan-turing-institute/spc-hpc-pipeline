@@ -59,7 +59,7 @@ pub struct HRPerson {
     #[serde(rename = "age")]
     pub age: Age,
     #[serde(rename = "sex")]
-    pub sex: Option<Sex>,
+    pub sex: Sex,
     #[serde(rename = "ethhuk11")]
     pub eth: Eth,
     pub n: usize,

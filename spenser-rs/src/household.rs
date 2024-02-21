@@ -1,11 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    person::{HRPID, PID},
-    Eth, OA,
-};
+use crate::{person::PID, Eth, OA};
 
-type MSOA = String;
 type UInt = i32;
 type Int = i32;
 #[derive(Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]

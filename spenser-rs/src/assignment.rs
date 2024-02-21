@@ -15,10 +15,12 @@ use rand::distributions::{Distribution, WeightedIndex};
 use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::Deserialize;
+use tracing::info;
 use typed_index_collections::TiVec;
 
 use crate::{
     config::{Config, Year},
+    queues::AdultOrChild,
     return_some, OA,
 };
 use crate::{
@@ -276,13 +278,13 @@ impl Assignment {
             for ((_, sample_person), household) in sample.iter().zip(h_ref) {
                 // Demographics
                 let age = sample_person.age;
-                let sex = sample_person
-                    .sex
-                    .unwrap_or_else(|| panic!("{hh_type}: expected to have non-missing sex."));
+                let sex = sample_person.sex;
                 let eth = sample_person.eth;
 
                 // Try exact match over unmatched
-                if let Some(pid) = queues.sample_adult(&msoa, age, sex, eth, &self.p_data) {
+                if let Some(pid) =
+                    queues.sample_person(msoa, age, sex, eth, AdultOrChild::Adult, &self.p_data)
+                {
                     // Assign pid to household
                     household.hrpid = Some(pid);
                     // Assign household to person
@@ -301,7 +303,6 @@ impl Assignment {
                         queues.matched.len(),
                         self.fail
                     );
-                    ()
                 } else {
                     return Err(anyhow!("No match for: {sample_person:?}").context("sample_hrp()"));
                 }
@@ -360,23 +361,22 @@ impl Assignment {
             let hrp_age = hrp.age;
             let hrp_eth = hrp.eth;
 
-            let dis = if let Some(v) = dist_by_ae.get(&(hrp_age, hrp_eth)) {
-                v
-            } else if let Some(v) = dist_by_a.get(&hrp_age) {
+            // Pick dist
+            let dist = dist_by_ae.get(&(hrp_age, hrp_eth)).unwrap_or_else(|| {
                 println!(
                     "Partner-HRP not sampled: {:3}, {:3?}, {:3?} - resample withouth eht.",
                     hrp_age, hrp_sex, hrp_eth
                 );
-                v
-            } else {
-                println!(
-                    "Partner-HRP not sampled: {}, {:?}, {:?}",
-                    hrp_age, hrp_sex, hrp_eth
-                );
-                &dist
-            };
+                dist_by_a.get(&hrp_age).unwrap_or_else(|| {
+                    println!(
+                        "Partner-HRP not sampled: {}, {:?}, {:?}",
+                        hrp_age, hrp_sex, hrp_eth
+                    );
+                    &dist
+                })
+            });
 
-            let partner_sample_id = dis.choose_weighted(&mut self.rng, |item| item.1)?.0;
+            let partner_sample_id = dist.choose_weighted(&mut self.rng, |item| item.1)?.0;
             let partner_sample = self
                 .partner_hrp_dist
                 .get(partner_sample_id)
@@ -392,7 +392,9 @@ impl Assignment {
             let eth: Eth = partner_sample.ethnicityew.into();
 
             // Sample a HR person
-            if let Some(pid) = queues.sample_adult(msoa, age, sex, eth, &self.p_data) {
+            if let Some(pid) =
+                queues.sample_person(msoa, age, sex, eth, AdultOrChild::Adult, &self.p_data)
+            {
                 // Assign pid to household
                 household.hrpid = Some(pid);
                 // Assign household to person
@@ -412,7 +414,6 @@ impl Assignment {
                     queues.matched.len(),
                     self.fail
                 );
-                ()
             } else {
                 println!("No partner match!");
                 self.fail += 1;
@@ -422,16 +423,116 @@ impl Assignment {
         Ok(())
     }
 
-    // self.h_data.LC4404_C_SIZHUK11 == nocc
     fn sample_single_parent_child(
         &mut self,
         msoa: &MSOA,
         oas: &HashSet<OA>,
-        nocc: usize,
+        num_occ: i32,
         mark_filled: bool,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
-        todo!()
+        let hsp_ref: Vec<_> = self
+            .h_data
+            .iter_mut()
+            .filter(|household| {
+                // TODO: check condition as for other sample
+                oas.contains(&household.oa)
+                    && household.lc4404_c_sizhuk11.eq(&num_occ)
+                    && household.lc4408_c_ahthuk11.eq(&4)
+                    && household.filled != Some(true)
+            })
+            .collect();
+
+        // Sampling by age and ethnicity
+        let mut dist_by_ae = HashMap::new();
+        // Sampling by age
+        let mut dist_by_a = HashMap::new();
+        // Sampling by eth
+        let mut dist_by_e = HashMap::new();
+
+        // Populate lookups
+        self.child_hrp_dist
+            .iter_enumerated()
+            .for_each(|(hrpid, partner)| {
+                dist_by_ae
+                    .entry((partner.age, partner.eth))
+                    .and_modify(|v: &mut Vec<(HRPID, usize)>| {
+                        v.push((hrpid, partner.n));
+                    })
+                    .or_insert(vec![(hrpid, partner.n)]);
+                dist_by_a
+                    .entry(partner.age)
+                    .and_modify(|v: &mut Vec<(HRPID, usize)>| {
+                        v.push((hrpid, partner.n));
+                    })
+                    .or_insert(vec![(hrpid, partner.n)]);
+                dist_by_e
+                    .entry(partner.eth)
+                    .and_modify(|v: &mut Vec<(HRPID, usize)>| {
+                        v.push((hrpid, partner.n));
+                    })
+                    .or_insert(vec![(hrpid, partner.n)]);
+            });
+
+        // Construct vec from HRPID and weights
+        let dist = self
+            .child_hrp_dist
+            .iter_enumerated()
+            .map(|(idx, person)| (idx.to_owned(), person.n))
+            .collect();
+
+        for household in hsp_ref {
+            let hrpid = household.hrpid.expect("HRPID is not assigned.");
+            let hrp_person = self.p_data.get(hrpid).expect("Invalid PID.");
+            let hrp_age = hrp_person.age;
+            // TODO: check why unused
+            let hrp_sex = hrp_person.sex;
+            let hrp_eth = hrp_person.eth;
+
+            // Pick dist
+            let dist = dist_by_ae.get(&(hrp_age, hrp_eth)).unwrap_or_else(|| {
+                dist_by_a
+                    .get(&hrp_age)
+                    .unwrap_or_else(|| dist_by_e.get(&hrp_eth).unwrap_or(&dist))
+            });
+
+            // Sample:: TODO: make sep fn
+            let child_sample_id = dist.choose_weighted(&mut self.rng, |item| item.1)?.0;
+            let child_sample = self
+                .child_hrp_dist
+                .get(child_sample_id)
+                .ok_or(anyhow!("Invalid HRPID: {child_sample_id}"))?;
+            let age = child_sample.age;
+            let sex = child_sample.sex;
+            let eth = child_sample.eth;
+
+            // Get match from population
+            if let Some(pid) =
+                queues.sample_person(msoa, age, sex, eth, AdultOrChild::Child, &self.p_data)
+            {
+                self.p_data
+                    .get_mut(pid)
+                    .unwrap_or_else(|| panic!("Invalid {pid}"))
+                    // TODO: fix the household HID field to have HID type
+                    .hid = Some(HID(household.hid.to_owned() as usize));
+                if mark_filled {
+                    household.filled = Some(true)
+                }
+                println!(
+                    "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
+                    queues.unmatched.len(),
+                    queues.matched.len(),
+                    self.fail
+                );
+            } else {
+                println!(
+                    "child not found,  age: {}, sex: {:?}, eth: {:?}",
+                    age, sex, eth
+                );
+            }
+        }
+
+        Ok(())
     }
     // TODO: add defs
     fn sample_couple_child(
@@ -511,29 +612,31 @@ impl Assignment {
                 .collect();
             println!("{:?}", msoa);
             println!("{:?}", oas);
-            input();
+
             // Sample HRP
-            println!("assigning HRPs");
+            println!("> assigning HRPs");
             self.sample_hrp(msoa, &oas, &mut queues)?;
             // self.stats();
 
             // Sample partner
             // TODO: check all partners assigned (from python)
-            println!("assigning partners to HRPs where appropriate");
+            println!("> assigning partners to HRPs where appropriate");
             self.sample_partner(msoa, &oas, &mut queues)?;
             // self.stats()
 
+            println!("> assigning child 1 to single-parent households");
             // // self.__sample_single_parent_child(msoa, oas, 2, mark_filled=True)
-            // self.sample_single_parent_child(msoa, &oas, 2, true, &mut queues)?;
+            self.sample_single_parent_child(msoa, &oas, 2, true, &mut queues)?;
             // // self.stats()
 
+            println!("> assigning child 2 to single-parent households");
             // // self.__sample_single_parent_child(msoa, oas, 3, mark_filled=True)
-            // self.sample_single_parent_child(msoa, &oas, 3, true, &mut queues)?;
+            self.sample_single_parent_child(msoa, &oas, 3, true, &mut queues)?;
             // // self.stats()
 
-            // // print("assigning child 3 to single-parent households")
+            println!("> assigning child 3 to single-parent households");
             // // self.__sample_single_parent_child(msoa, oas, 4, mark_filled=False)
-            // self.sample_single_parent_child(msoa, &oas, 4, true, &mut queues)?;
+            self.sample_single_parent_child(msoa, &oas, 4, true, &mut queues)?;
             // // self.stats()
 
             // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
