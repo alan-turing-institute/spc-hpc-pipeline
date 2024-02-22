@@ -71,8 +71,20 @@ impl Sex {
     }
 }
 
+impl std::fmt::Display for Sex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Sex: {}", self.0)
+    }
+}
+
 #[derive(Hash, Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Age(pub usize);
+
+impl std::fmt::Display for Age {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Age: {}", self.0)
+    }
+}
 
 #[derive(Hash, Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Eth(pub i32);
@@ -92,14 +104,14 @@ impl From<EthEW> for Eth {
     }
 }
 
-impl From<i32> for EthEW {
-    fn from(value: i32) -> Self {
-        Self(value)
+impl std::fmt::Display for Eth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Eth: {}", self.0)
     }
 }
 
-impl std::fmt::Display for Age {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+impl From<i32> for EthEW {
+    fn from(value: i32) -> Self {
+        Self(value)
     }
 }

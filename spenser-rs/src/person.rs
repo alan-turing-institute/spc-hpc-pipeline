@@ -82,6 +82,22 @@ pub struct PartnerHRPerson {
     pub samesex: bool,
 }
 
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ChildHRPerson {
+    #[serde(rename = "age")]
+    pub age: Age,
+    #[serde(rename = "sex")]
+    pub sex: Sex,
+    #[serde(rename = "agehrp")]
+    pub agehrp: Age,
+    #[serde(rename = "ethnicityew")]
+    pub ethnicityew: EthEW,
+    #[serde(rename = "ethhuk11")]
+    pub eth: Eth,
+    #[serde(rename = "n")]
+    pub n: usize,
+}
+
 // See:
 fn deserialize_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where

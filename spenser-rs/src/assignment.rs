@@ -20,6 +20,7 @@ use typed_index_collections::TiVec;
 
 use crate::{
     config::{Config, Year},
+    person::ChildHRPerson,
     queues::AdultOrChild,
     return_some, OA,
 };
@@ -51,7 +52,7 @@ struct Assignment {
     pub hrp_dist: BTreeMap<String, TiVec<HRPID, HRPerson>>,
     pub hrp_index: BTreeMap<String, Vec<i32>>,
     pub partner_hrp_dist: TiVec<HRPID, PartnerHRPerson>,
-    pub child_hrp_dist: TiVec<HRPID, HRPerson>,
+    pub child_hrp_dist: TiVec<HRPID, ChildHRPerson>,
     pub rng: StdRng,
     pub fail: usize,
 }
@@ -133,6 +134,11 @@ fn map_eth<K, V: GetSetEth>(
             }
         })
         .collect::<anyhow::Result<TiVec<K, V>>>()
+}
+
+enum Parent {
+    Single,
+    Couple,
 }
 
 impl Assignment {
@@ -423,12 +429,13 @@ impl Assignment {
         Ok(())
     }
 
-    fn sample_single_parent_child(
+    fn sample_child(
         &mut self,
         msoa: &MSOA,
         oas: &HashSet<OA>,
         num_occ: i32,
         mark_filled: bool,
+        parent: Parent,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
         let hsp_ref: Vec<_> = self
@@ -438,7 +445,10 @@ impl Assignment {
                 // TODO: check condition as for other sample
                 oas.contains(&household.oa)
                     && household.lc4404_c_sizhuk11.eq(&num_occ)
-                    && household.lc4408_c_ahthuk11.eq(&4)
+                    && match parent {
+                        Parent::Single => household.lc4408_c_ahthuk11.eq(&4),
+                        Parent::Couple => [2, 3].contains(&household.lc4408_c_ahthuk11),
+                    }
                     && household.filled != Some(true)
             })
             .collect();
@@ -453,25 +463,26 @@ impl Assignment {
         // Populate lookups
         self.child_hrp_dist
             .iter_enumerated()
-            .for_each(|(hrpid, partner)| {
+            // TODO: check the conditions with the dataframe filter
+            .for_each(|(hrpid, child)| {
                 dist_by_ae
-                    .entry((partner.age, partner.eth))
+                    .entry((child.agehrp, child.eth))
                     .and_modify(|v: &mut Vec<(HRPID, usize)>| {
-                        v.push((hrpid, partner.n));
+                        v.push((hrpid, child.n));
                     })
-                    .or_insert(vec![(hrpid, partner.n)]);
+                    .or_insert(vec![(hrpid, child.n)]);
                 dist_by_a
-                    .entry(partner.age)
+                    .entry(child.agehrp)
                     .and_modify(|v: &mut Vec<(HRPID, usize)>| {
-                        v.push((hrpid, partner.n));
+                        v.push((hrpid, child.n));
                     })
-                    .or_insert(vec![(hrpid, partner.n)]);
+                    .or_insert(vec![(hrpid, child.n)]);
                 dist_by_e
-                    .entry(partner.eth)
+                    .entry(child.eth)
                     .and_modify(|v: &mut Vec<(HRPID, usize)>| {
-                        v.push((hrpid, partner.n));
+                        v.push((hrpid, child.n));
                     })
-                    .or_insert(vec![(hrpid, partner.n)]);
+                    .or_insert(vec![(hrpid, child.n)]);
             });
 
         // Construct vec from HRPID and weights
@@ -490,12 +501,16 @@ impl Assignment {
             let hrp_eth = hrp_person.eth;
 
             // Pick dist
-            let dist = dist_by_ae.get(&(hrp_age, hrp_eth)).unwrap_or_else(|| {
-                dist_by_a
-                    .get(&hrp_age)
-                    .unwrap_or_else(|| dist_by_e.get(&hrp_eth).unwrap_or(&dist))
-            });
-
+            let dist = match parent {
+                Parent::Single => dist_by_ae.get(&(hrp_age, hrp_eth)).unwrap_or_else(|| {
+                    dist_by_a
+                        .get(&hrp_age)
+                        .unwrap_or_else(|| dist_by_e.get(&hrp_eth).unwrap_or(&dist))
+                }),
+                Parent::Couple => dist_by_ae
+                    .get(&(hrp_age, hrp_eth))
+                    .unwrap_or_else(|| panic!("No matching {hrp_age}, {hrp_eth} in distribution.")),
+            };
             // Sample:: TODO: make sep fn
             let child_sample_id = dist.choose_weighted(&mut self.rng, |item| item.1)?.0;
             let child_sample = self
@@ -510,6 +525,7 @@ impl Assignment {
             if let Some(pid) =
                 queues.sample_person(msoa, age, sex, eth, AdultOrChild::Child, &self.p_data)
             {
+                println!("{}", pid);
                 self.p_data
                     .get_mut(pid)
                     .unwrap_or_else(|| panic!("Invalid {pid}"))
@@ -533,17 +549,6 @@ impl Assignment {
         }
 
         Ok(())
-    }
-    // TODO: add defs
-    fn sample_couple_child(
-        &mut self,
-        msoa: &MSOA,
-        oas: &HashSet<OA>,
-        nocc: usize,
-        mark_filled: bool,
-        queues: &mut Queues,
-    ) -> anyhow::Result<()> {
-        todo!()
     }
 
     fn fill_multi(
@@ -626,29 +631,29 @@ impl Assignment {
 
             println!("> assigning child 1 to single-parent households");
             // // self.__sample_single_parent_child(msoa, oas, 2, mark_filled=True)
-            self.sample_single_parent_child(msoa, &oas, 2, true, &mut queues)?;
+            self.sample_child(msoa, &oas, 2, true, Parent::Single, &mut queues)?;
             // // self.stats()
 
             println!("> assigning child 2 to single-parent households");
             // // self.__sample_single_parent_child(msoa, oas, 3, mark_filled=True)
-            self.sample_single_parent_child(msoa, &oas, 3, true, &mut queues)?;
+            self.sample_child(msoa, &oas, 3, true, Parent::Single, &mut queues)?;
             // // self.stats()
 
             println!("> assigning child 3 to single-parent households");
             // // self.__sample_single_parent_child(msoa, oas, 4, mark_filled=False)
-            self.sample_single_parent_child(msoa, &oas, 4, true, &mut queues)?;
+            self.sample_child(msoa, &oas, 4, true, Parent::Single, &mut queues)?;
             // // self.stats()
 
             // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
-            // println!("assigning child 1 to couple households");
+            println!("assigning child 1 to couple households");
             // // self.__sample_couple_child(msoa, oas, 3, mark_filled=True)
-            // self.sample_couple_child(msoa, &oas, 3, true, &mut queues)?;
+            self.sample_child(msoa, &oas, 3, true, Parent::Couple, &mut queues)?;
             // // self.stats()
 
             // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
-            // println!("assigning child 2 to single-parent households");
+            println!("assigning child 2 to single-parent households");
             // // self.__sample_couple_child(msoa, oas, 4, mark_filled=False)
-            // self.sample_couple_child(msoa, &oas, 3, false, &mut queues)?;
+            self.sample_child(msoa, &oas, 4, true, Parent::Couple, &mut queues)?;
             // // self.stats()
 
             // println!("multi-person households");
