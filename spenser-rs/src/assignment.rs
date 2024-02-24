@@ -706,9 +706,8 @@ impl Assignment {
                 }
             })
             .collect();
-        let n_p = p_unassigned.len();
 
-        let mut h_candidates: Vec<_> = self
+        let h_candidates: Vec<_> = self
             .h_data
             .iter_mut()
             .filter(|household| {
@@ -717,7 +716,7 @@ impl Assignment {
                     && household.filled != Some(true)
             })
             .collect();
-        if h_candidates.len() > 0 {
+        if !h_candidates.is_empty() {
             for person in p_unassigned {
                 let h_sample = h_candidates
                     .choose(&mut self.rng)
@@ -733,6 +732,7 @@ impl Assignment {
                     queues.matched.len(),
                     self.fail
                 );
+                // TODO: handle assignment to household? Not included in python.
             }
         }
         Ok(())
@@ -744,7 +744,54 @@ impl Assignment {
         oas: &HashSet<OA>,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
-        todo!()
+        for eth in [2, 3, 4, 5, 6, 7, 8].into_iter().map(Eth) {
+            let c_unassigned: Vec<&mut Person> = self
+                .p_data
+                .iter_mut()
+                .filter_map(|person| {
+                    if person.msoa.eq(msoa)
+                        && person.age <= ADULT_AGE
+                        && person.hid.is_none()
+                        && person.eth.eq(&eth)
+                    {
+                        Some(person)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            let h_candidates: Vec<_> = self
+                .h_data
+                .iter_mut()
+                .filter(|household| {
+                    oas.contains(&household.oa)
+                        && household.lc4202_c_ethhuk11.eq(&eth)
+                        && [2, 3, 4, 5].contains(&household.lc4408_c_ahthuk11)
+                        && household.filled != Some(true)
+                })
+                .collect();
+            if !h_candidates.is_empty() {
+                for person in c_unassigned {
+                    let h_sample = h_candidates
+                        .choose(&mut self.rng)
+                        .expect("Cannot be empty.");
+                    // TODO: fix conversion between sample.hid and HID
+                    person.hid = Some(HID(h_sample.hid as usize));
+                    let pid = PID(person.pid);
+                    queues.matched.insert(pid);
+                    queues.unmatched.remove(&pid);
+                    println!(
+                        "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
+                        queues.unmatched.len(),
+                        queues.matched.len(),
+                        self.fail
+                    );
+                    // TODO: handle assignment to household? Not included in python.
+                }
+            }
+        }
+        Ok(())
     }
 
     // TODO: add type for LAD
@@ -834,8 +881,8 @@ impl Assignment {
             self.assign_surplus_adults(msoa, &oas, &mut queues)?;
             // // self.stats()
 
-            // println!("assigning surplus children");
-            // self.assign_surplus_children(msoa, &oas, &mut queues)?;
+            println!("> assigning surplus children");
+            self.assign_surplus_children(msoa, &oas, &mut queues)?;
             // // self.stats()
         }
 
@@ -887,9 +934,10 @@ mod tests {
             profile: false,
         };
         let mut assignment = Assignment::new("E06000001", &config)?;
+        assignment.run()?;
         // TODO: add as test data
         // let mut assignment = Assignment::new("E09000001", &config)?;
-        assignment.run()?;
+        // assignment.run()?;
         Ok(())
     }
 }
