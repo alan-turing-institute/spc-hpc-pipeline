@@ -23,6 +23,12 @@ const ADULT_AGE: Age = Age(16);
 #[derive(Hash, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MSOA(String);
 
+impl std::fmt::Display for MSOA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl From<&str> for MSOA {
     fn from(value: &str) -> Self {
         Self(value.to_owned())

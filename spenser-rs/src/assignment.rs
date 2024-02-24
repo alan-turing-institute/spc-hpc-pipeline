@@ -10,16 +10,17 @@ use std::{
 
 use anyhow::anyhow;
 use hashbrown::HashSet;
+use log::{debug, error, info, warn};
 use polars::prelude::*;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::Deserialize;
-use tracing::info;
 use typed_index_collections::TiVec;
 
 use crate::{
     config::{Config, Year},
+    household,
     person::ChildHRPerson,
     queues::AdultOrChild,
     return_some, ADULT_AGE, OA,
@@ -303,7 +304,7 @@ impl Assignment {
                     if household.lc4408_c_ahthuk11 == 1 {
                         household.filled = Some(true)
                     }
-                    println!(
+                    debug!(
                         "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                         queues.unmatched.len(),
                         queues.matched.len(),
@@ -369,12 +370,12 @@ impl Assignment {
 
             // Pick dist
             let dist = dist_by_ae.get(&(hrp_age, hrp_eth)).unwrap_or_else(|| {
-                println!(
+                warn!(
                     "Partner-HRP not sampled: {:3}, {:3?}, {:3?} - resample withouth eht.",
                     hrp_age, hrp_sex, hrp_eth
                 );
                 dist_by_a.get(&hrp_age).unwrap_or_else(|| {
-                    println!(
+                    warn!(
                         "Partner-HRP not sampled: {}, {:?}, {:?}",
                         hrp_age, hrp_sex, hrp_eth
                     );
@@ -414,14 +415,14 @@ impl Assignment {
                 if household.lc4404_c_sizhuk11 == 2 {
                     household.filled = Some(true)
                 }
-                println!(
+                debug!(
                     "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                     queues.unmatched.len(),
                     queues.matched.len(),
                     self.fail
                 );
             } else {
-                println!("No partner match!");
+                error!("No partner match!");
                 self.fail += 1;
             }
         }
@@ -515,7 +516,7 @@ impl Assignment {
                         dist
                     } else {
                         // TODO: update with logging/tracing
-                        println!(
+                        warn!(
                             "child-HRP not sampled: {}, {}, {}",
                             hrp_age, hrp_sex, hrp_eth
                         );
@@ -545,14 +546,14 @@ impl Assignment {
                 if mark_filled {
                     household.filled = Some(true)
                 }
-                println!(
+                debug!(
                     "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                     queues.unmatched.len(),
                     queues.matched.len(),
                     self.fail
                 );
             } else {
-                println!(
+                warn!(
                     "child not found,  age: {}, sex: {:?}, eth: {:?}",
                     age, sex, eth
                 );
@@ -595,7 +596,7 @@ impl Assignment {
                 if mark_filled && household.lc4404_c_sizhuk11 == nocc as i32 {
                     household.filled = Some(true);
                 }
-                println!(
+                debug!(
                     "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                     queues.unmatched.len(),
                     queues.matched.len(),
@@ -603,7 +604,7 @@ impl Assignment {
                 );
             } else {
                 println!(
-                    "warning: out of multi-people, need {} households for {}",
+                    "Out of multi-people, need {} households for {}",
                     h_ref.len(),
                     idx + 1
                 );
@@ -612,6 +613,7 @@ impl Assignment {
         }
         Ok(())
     }
+
     fn fill_communal(
         &mut self,
         msoa: &MSOA,
@@ -653,7 +655,7 @@ impl Assignment {
                 // TODO: can nocc be made usize in data schema?
                 if i32::try_from(pids.len()).expect("Not i32").lt(&nocc) {
                     // TODO: warning logging
-                    println!("cannot assign to communal: {:?}", household);
+                    warn!("cannot assign to communal: {:?}", household);
                     // Put PIDs back
                     // TODO: refactor into method on queues
                     while let Some(pid) = pids.pop() {
@@ -677,7 +679,7 @@ impl Assignment {
                         // TODO: fix the household HID field to have HID type
                         .hid = Some(HID(household.hid.to_owned() as usize));
 
-                    println!(
+                    debug!(
                         "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                         queues.unmatched.len(),
                         queues.matched.len(),
@@ -726,7 +728,7 @@ impl Assignment {
                 let pid = PID(person.pid);
                 queues.matched.insert(pid);
                 queues.unmatched.remove(&pid);
-                println!(
+                debug!(
                     "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
                     queues.unmatched.len(),
                     queues.matched.len(),
@@ -781,17 +783,79 @@ impl Assignment {
                     let pid = PID(person.pid);
                     queues.matched.insert(pid);
                     queues.unmatched.remove(&pid);
-                    println!(
-                        "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                        queues.unmatched.len(),
-                        queues.matched.len(),
-                        self.fail
-                    );
+                    // TODO
+                    // self.debug_stats(pid, queues);
+                    //     "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
+                    //     queues.unmatched.len(),
+                    //     queues.matched.len(),
+                    //     self.fail
+                    // );
                     // TODO: handle assignment to household? Not included in python.
                 }
             }
         }
         Ok(())
+    }
+
+    pub fn debug_stats(&self, pid: PID, queues: &Queues) {
+        debug!(
+            "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
+            queues.unmatched.len(),
+            queues.matched.len(),
+            self.fail
+        );
+    }
+
+    pub fn info_stats(&self) {
+        let assigned_people = self
+            .p_data
+            .iter()
+            .filter(|person| person.hid.is_some())
+            .count();
+        let assigned_households = self
+            .h_data
+            .iter()
+            .filter(|household| household.filled.eq(&Some(true)))
+            .count() as f64;
+        let total_people = self.p_data.len() as f64;
+        let total_households = self
+            .h_data
+            .iter()
+            .filter(|household| household.lc4408_c_ahthuk11 > 0)
+            .count() as f64;
+        info!(
+            "{0:25}: {1:6} ({2:3.2}%)",
+            "People",
+            assigned_people,
+            100. * (assigned_people as f64 / total_people)
+        );
+        info!(
+            "{0:25}: {1:6}",
+            "Remaining people",
+            self.p_data
+                .iter()
+                .filter(|person| person.hid.is_none())
+                .count()
+        );
+        info!(
+            "{0:25}: {1:6} ({2:3.2})%",
+            "Households",
+            assigned_households,
+            100. * assigned_households / total_households
+        );
+        info!(
+            "{0:25}: {1:6} (+{2:6})",
+            "Remaining households",
+            self.h_data
+                .iter()
+                .filter(|household| !household.filled.eq(&Some(true))
+                    && household.lc4408_c_ahthuk11 > 0)
+                .count(),
+            self.h_data
+                .iter()
+                .filter(|household| household.lc4408_c_ahthuk11.eq(&-1))
+                .count()
+        )
     }
 
     // TODO: add type for LAD
@@ -806,6 +870,7 @@ impl Assignment {
             .map(|person| person.msoa.to_owned())
             .collect();
 
+        // Run assignment over each MSOA
         for msoa in msoas.iter() {
             let oas = self
                 .geog_lookup
@@ -822,68 +887,65 @@ impl Assignment {
                 .into_iter()
                 .map(|el| el.unwrap().to_owned().into())
                 .collect();
-            println!("{:?}", msoa);
-            println!("{:?}", oas);
+            info!(">>> MSOA: {}", msoa);
+            info!(
+                ">>> OAs : {}",
+                oas.iter()
+                    .map(|oa| oa.0.to_owned())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            );
 
             // Sample HRP
-            println!("> assigning HRPs");
+            info!(">>> Assigning HRPs");
             self.sample_hrp(msoa, &oas, &mut queues)?;
-            // self.stats();
+            self.info_stats();
 
             // Sample partner
             // TODO: check all partners assigned (from python)
-            println!("> assigning partners to HRPs where appropriate");
+            info!(">>> Assigning partners to HRPs where appropriate");
             self.sample_partner(msoa, &oas, &mut queues)?;
-            // self.stats()
+            self.info_stats();
 
-            println!("> assigning child 1 to single-parent households");
-            // // self.__sample_single_parent_child(msoa, oas, 2, mark_filled=True)
+            info!(">>> Assigning child 1 to single-parent households");
             self.sample_child(msoa, &oas, 2, true, Parent::Single, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            println!("> assigning child 2 to single-parent households");
-            // // self.__sample_single_parent_child(msoa, oas, 3, mark_filled=True)
+            info!(">>> Assigning child 2 to single-parent households");
             self.sample_child(msoa, &oas, 3, true, Parent::Single, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            println!("> assigning child 3 to single-parent households");
-            // // self.__sample_single_parent_child(msoa, oas, 4, mark_filled=False)
+            info!(">>> Assigning child 3 to single-parent households");
             self.sample_child(msoa, &oas, 4, true, Parent::Single, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
-            println!("> assigning child 1 to couple households");
-            // // self.__sample_couple_child(msoa, oas, 3, mark_filled=True)
+            // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
+            info!(">>> Assigning child 1 to couple households");
             self.sample_child(msoa, &oas, 3, true, Parent::Couple, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
-            println!("> assigning child 2 to single-parent households");
-            // // self.__sample_couple_child(msoa, oas, 4, mark_filled=False)
+            // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
+            info!(">>> Assigning child 2 to single-parent households");
             self.sample_child(msoa, &oas, 4, true, Parent::Couple, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            println!("> multi-person households");
-            // // self.__fill_multi(msoa, oas, 2)
+            info!(">>> Multi-person households");
             self.fill_multi(msoa, &oas, 2, true, &mut queues)?;
-            // // self.__fill_multi(msoa, oas, 3)
             self.fill_multi(msoa, &oas, 3, true, &mut queues)?;
-            // // self.__fill_multi(msoa, oas, 4, mark_filled=False)
             self.fill_multi(msoa, &oas, 4, false, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            println!("> assigning people to communal establishments");
-            // // self.__fill_communal(msoa, oas)
+            info!(">>> Assigning people to communal establishments");
             self.fill_communal(msoa, &oas, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            println!("> assigning surplus adults");
+            info!(">>> Assigning surplus adults");
             self.assign_surplus_adults(msoa, &oas, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
 
-            println!("> assigning surplus children");
+            info!(">>> Assigning surplus children");
             self.assign_surplus_children(msoa, &oas, &mut queues)?;
-            // // self.stats()
+            self.info_stats();
         }
 
         Ok(())
@@ -924,6 +986,7 @@ mod tests {
 
     #[test]
     fn test_run() -> anyhow::Result<()> {
+        env_logger::init();
         let config = Config {
             person_resolution: Resolution::MSOA11,
             household_resolution: Resolution::OA11,
@@ -935,9 +998,8 @@ mod tests {
         };
         let mut assignment = Assignment::new("E06000001", &config)?;
         assignment.run()?;
-        // TODO: add as test data
-        // let mut assignment = Assignment::new("E09000001", &config)?;
-        // assignment.run()?;
+        let mut assignment = Assignment::new("E09000001", &config)?;
+        assignment.run()?;
         Ok(())
     }
 }
