@@ -40,6 +40,13 @@ fn input() {
     std::io::stdin().read_exact(&mut [0]).unwrap();
 }
 
+pub fn debug_stats(pid: PID, total_matched: usize, total_unmatched: usize) {
+    debug!(
+        "Assigned person: {pid:10}, matched: {:6}, unmatched: {:6}",
+        total_matched, total_unmatched
+    );
+}
+
 #[derive(Debug)]
 struct Assignment {
     pub region: String,
@@ -54,8 +61,8 @@ struct Assignment {
     pub hrp_index: BTreeMap<String, Vec<i32>>,
     pub partner_hrp_dist: TiVec<HRPID, PartnerHRPerson>,
     pub child_hrp_dist: TiVec<HRPID, ChildHRPerson>,
+    pub queues: Queues,
     pub rng: StdRng,
-    pub fail: usize,
 }
 
 fn read_geog_lookup(path: &str) -> anyhow::Result<DataFrame> {
@@ -231,7 +238,8 @@ impl Assignment {
             p_data = map_eth(p_data, &eth_remapping)?;
             h_data = map_eth(h_data, &eth_remapping)?;
         }
-
+        let mut rng = StdRng::seed_from_u64(0);
+        let queues = Queues::new(&p_data, &mut rng);
         Ok(Self {
             region: region.to_owned(),
             year: config.year.to_owned(),
@@ -245,17 +253,12 @@ impl Assignment {
             hrp_index,
             partner_hrp_dist,
             child_hrp_dist,
-            rng: StdRng::seed_from_u64(0),
-            fail: 0,
+            queues,
+            rng,
         })
     }
 
-    fn sample_hrp(
-        &mut self,
-        msoa: &MSOA,
-        oas: &HashSet<OA>,
-        queues: &mut Queues,
-    ) -> anyhow::Result<()> {
+    fn sample_hrp(&mut self, msoa: &MSOA, oas: &HashSet<OA>) -> anyhow::Result<()> {
         for hh_type in ["sgl", "cpl", "sp", "mix"]
             .into_iter()
             .map(|s| s.to_owned())
@@ -289,9 +292,14 @@ impl Assignment {
                 let eth = sample_person.eth;
 
                 // Try exact match over unmatched
-                if let Some(pid) =
-                    queues.sample_person(msoa, age, sex, eth, AdultOrChild::Adult, &self.p_data)
-                {
+                if let Some(pid) = self.queues.sample_person(
+                    msoa,
+                    age,
+                    sex,
+                    eth,
+                    AdultOrChild::Adult,
+                    &self.p_data,
+                ) {
                     // Assign pid to household
                     household.hrpid = Some(pid);
                     // Assign household to person
@@ -304,12 +312,7 @@ impl Assignment {
                     if household.lc4408_c_ahthuk11 == 1 {
                         household.filled = Some(true)
                     }
-                    debug!(
-                        "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                        queues.unmatched.len(),
-                        queues.matched.len(),
-                        self.fail
-                    );
+                    debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
                 } else {
                     return Err(anyhow!("No match for: {sample_person:?}").context("sample_hrp()"));
                 }
@@ -318,12 +321,7 @@ impl Assignment {
         Ok(())
     }
 
-    fn sample_partner(
-        &mut self,
-        msoa: &MSOA,
-        oas: &HashSet<OA>,
-        queues: &mut Queues,
-    ) -> anyhow::Result<()> {
+    fn sample_partner(&mut self, msoa: &MSOA, oas: &HashSet<OA>) -> anyhow::Result<()> {
         let h2_ref: Vec<_> = self
             .h_data
             .iter_mut()
@@ -371,12 +369,12 @@ impl Assignment {
             // Pick dist
             let dist = dist_by_ae.get(&(hrp_age, hrp_eth)).unwrap_or_else(|| {
                 warn!(
-                    "Partner-HRP not sampled: {:3}, {:3?}, {:3?} - resample withouth eht.",
+                    "Partner-HRP not sampled: {}, {}, {} - resample withouth eth",
                     hrp_age, hrp_sex, hrp_eth
                 );
                 dist_by_a.get(&hrp_age).unwrap_or_else(|| {
                     warn!(
-                        "Partner-HRP not sampled: {}, {:?}, {:?}",
+                        "Partner-HRP not sampled: {}, {}, {}",
                         hrp_age, hrp_sex, hrp_eth
                     );
                     &dist
@@ -400,7 +398,8 @@ impl Assignment {
 
             // Sample a HR person
             if let Some(pid) =
-                queues.sample_person(msoa, age, sex, eth, AdultOrChild::Adult, &self.p_data)
+                self.queues
+                    .sample_person(msoa, age, sex, eth, AdultOrChild::Adult, &self.p_data)
             {
                 // Assign pid to household
                 household.hrpid = Some(pid);
@@ -415,15 +414,9 @@ impl Assignment {
                 if household.lc4404_c_sizhuk11 == 2 {
                     household.filled = Some(true)
                 }
-                debug!(
-                    "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                    queues.unmatched.len(),
-                    queues.matched.len(),
-                    self.fail
-                );
+                debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
             } else {
                 error!("No partner match!");
-                self.fail += 1;
             }
         }
 
@@ -437,7 +430,6 @@ impl Assignment {
         num_occ: i32,
         mark_filled: bool,
         parent: Parent,
-        queues: &mut Queues,
     ) -> anyhow::Result<()> {
         let hsp_ref: Vec<_> = self
             .h_data
@@ -515,7 +507,6 @@ impl Assignment {
                     {
                         dist
                     } else {
-                        // TODO: update with logging/tracing
                         warn!(
                             "child-HRP not sampled: {}, {}, {}",
                             hrp_age, hrp_sex, hrp_eth
@@ -536,7 +527,8 @@ impl Assignment {
 
             // Get match from population
             if let Some(pid) =
-                queues.sample_person(msoa, age, sex, eth, AdultOrChild::Child, &self.p_data)
+                self.queues
+                    .sample_person(msoa, age, sex, eth, AdultOrChild::Child, &self.p_data)
             {
                 self.p_data
                     .get_mut(pid)
@@ -546,12 +538,7 @@ impl Assignment {
                 if mark_filled {
                     household.filled = Some(true)
                 }
-                debug!(
-                    "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                    queues.unmatched.len(),
-                    queues.matched.len(),
-                    self.fail
-                );
+                debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
             } else {
                 warn!(
                     "child not found,  age: {}, sex: {:?}, eth: {:?}",
@@ -569,7 +556,6 @@ impl Assignment {
         oas: &HashSet<OA>,
         nocc: usize,
         mark_filled: bool,
-        queues: &mut Queues,
     ) -> anyhow::Result<()> {
         let mut h_ref: Vec<_> = self
             .h_data
@@ -583,7 +569,7 @@ impl Assignment {
             .collect();
 
         for (idx, household) in h_ref.iter_mut().enumerate() {
-            let pid = queues.sample_adult_any(msoa);
+            let pid = self.queues.sample_adult_any(msoa);
             // TODO: create method for assignment part
             if let Some(pid) = pid {
                 self.p_data
@@ -596,12 +582,7 @@ impl Assignment {
                 if mark_filled && household.lc4404_c_sizhuk11 == nocc as i32 {
                     household.filled = Some(true);
                 }
-                debug!(
-                    "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                    queues.unmatched.len(),
-                    queues.matched.len(),
-                    self.fail
-                );
+                debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
             } else {
                 println!(
                     "Out of multi-people, need {} households for {}",
@@ -614,12 +595,7 @@ impl Assignment {
         Ok(())
     }
 
-    fn fill_communal(
-        &mut self,
-        msoa: &MSOA,
-        oas: &HashSet<OA>,
-        queues: &mut Queues,
-    ) -> anyhow::Result<()> {
+    fn fill_communal(&mut self, msoa: &MSOA, oas: &HashSet<OA>) -> anyhow::Result<()> {
         let mut c_ref: Vec<_> = self
             .h_data
             .iter_mut()
@@ -640,11 +616,11 @@ impl Assignment {
                 let mut pids = vec![];
                 while i32::try_from(pids.len()).expect("Not i32") < nocc {
                     let pid = if ctype < 22 {
-                        queues.sample_person_over_75(msoa)
+                        self.queues.sample_person_over_75(msoa)
                     } else if ctype < 27 {
-                        queues.sample_person_19_to_25(msoa)
+                        self.queues.sample_person_19_to_25(msoa)
                     } else {
-                        queues.sample_person_over_16(msoa)
+                        self.queues.sample_person_over_16(msoa)
                     };
                     if let Some(pid) = pid {
                         pids.push(pid);
@@ -660,11 +636,11 @@ impl Assignment {
                     // TODO: refactor into method on queues
                     while let Some(pid) = pids.pop() {
                         let map = if ctype < 22 {
-                            &mut queues.people_by_area_over_75
+                            &mut self.queues.people_by_area_over_75
                         } else if ctype < 27 {
-                            &mut queues.people_by_area_19_to_25
+                            &mut self.queues.people_by_area_19_to_25
                         } else {
-                            &mut queues.people_by_area_over_16
+                            &mut self.queues.people_by_area_over_16
                         };
                         map.get_mut(msoa)
                             .expect("MSOA does not exist in lookup")
@@ -678,25 +654,14 @@ impl Assignment {
                         .unwrap_or_else(|| panic!("Invalid {pid}"))
                         // TODO: fix the household HID field to have HID type
                         .hid = Some(HID(household.hid.to_owned() as usize));
-
-                    debug!(
-                        "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                        queues.unmatched.len(),
-                        queues.matched.len(),
-                        self.fail
-                    );
+                    debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
                 }
             }
             household.filled = Some(true);
         }
         Ok(())
     }
-    fn assign_surplus_adults(
-        &mut self,
-        msoa: &MSOA,
-        oas: &HashSet<OA>,
-        queues: &mut Queues,
-    ) -> anyhow::Result<()> {
+    fn assign_surplus_adults(&mut self, msoa: &MSOA, oas: &HashSet<OA>) -> anyhow::Result<()> {
         let p_unassigned: Vec<&mut Person> = self
             .p_data
             .iter_mut()
@@ -726,14 +691,9 @@ impl Assignment {
                 // TODO: fix conversion between sample.hid and HID
                 person.hid = Some(HID(h_sample.hid as usize));
                 let pid = PID(person.pid);
-                queues.matched.insert(pid);
-                queues.unmatched.remove(&pid);
-                debug!(
-                    "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                    queues.unmatched.len(),
-                    queues.matched.len(),
-                    self.fail
-                );
+                self.queues.matched.insert(pid);
+                self.queues.unmatched.remove(&pid);
+                debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
                 // TODO: handle assignment to household? Not included in python.
             }
         }
@@ -783,27 +743,11 @@ impl Assignment {
                     let pid = PID(person.pid);
                     queues.matched.insert(pid);
                     queues.unmatched.remove(&pid);
-                    // TODO
-                    // self.debug_stats(pid, queues);
-                    //     "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-                    //     queues.unmatched.len(),
-                    //     queues.matched.len(),
-                    //     self.fail
-                    // );
                     // TODO: handle assignment to household? Not included in python.
                 }
             }
         }
         Ok(())
-    }
-
-    pub fn debug_stats(&self, pid: PID, queues: &Queues) {
-        debug!(
-            "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
-            queues.unmatched.len(),
-            queues.matched.len(),
-            self.fail
-        );
     }
 
     pub fn info_stats(&self) {
@@ -898,49 +842,49 @@ impl Assignment {
 
             // Sample HRP
             info!(">>> Assigning HRPs");
-            self.sample_hrp(msoa, &oas, &mut queues)?;
+            self.sample_hrp(msoa, &oas)?;
             self.info_stats();
 
             // Sample partner
             // TODO: check all partners assigned (from python)
             info!(">>> Assigning partners to HRPs where appropriate");
-            self.sample_partner(msoa, &oas, &mut queues)?;
+            self.sample_partner(msoa, &oas)?;
             self.info_stats();
 
             info!(">>> Assigning child 1 to single-parent households");
-            self.sample_child(msoa, &oas, 2, true, Parent::Single, &mut queues)?;
+            self.sample_child(msoa, &oas, 2, true, Parent::Single)?;
             self.info_stats();
 
             info!(">>> Assigning child 2 to single-parent households");
-            self.sample_child(msoa, &oas, 3, true, Parent::Single, &mut queues)?;
+            self.sample_child(msoa, &oas, 3, true, Parent::Single)?;
             self.info_stats();
 
             info!(">>> Assigning child 3 to single-parent households");
-            self.sample_child(msoa, &oas, 4, true, Parent::Single, &mut queues)?;
+            self.sample_child(msoa, &oas, 4, true, Parent::Single)?;
             self.info_stats();
 
             // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
             info!(">>> Assigning child 1 to couple households");
-            self.sample_child(msoa, &oas, 3, true, Parent::Couple, &mut queues)?;
+            self.sample_child(msoa, &oas, 3, true, Parent::Couple)?;
             self.info_stats();
 
             // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
             info!(">>> Assigning child 2 to single-parent households");
-            self.sample_child(msoa, &oas, 4, true, Parent::Couple, &mut queues)?;
+            self.sample_child(msoa, &oas, 4, true, Parent::Couple)?;
             self.info_stats();
 
             info!(">>> Multi-person households");
-            self.fill_multi(msoa, &oas, 2, true, &mut queues)?;
-            self.fill_multi(msoa, &oas, 3, true, &mut queues)?;
-            self.fill_multi(msoa, &oas, 4, false, &mut queues)?;
+            self.fill_multi(msoa, &oas, 2, true)?;
+            self.fill_multi(msoa, &oas, 3, true)?;
+            self.fill_multi(msoa, &oas, 4, false)?;
             self.info_stats();
 
             info!(">>> Assigning people to communal establishments");
-            self.fill_communal(msoa, &oas, &mut queues)?;
+            self.fill_communal(msoa, &oas)?;
             self.info_stats();
 
             info!(">>> Assigning surplus adults");
-            self.assign_surplus_adults(msoa, &oas, &mut queues)?;
+            self.assign_surplus_adults(msoa, &oas)?;
             self.info_stats();
 
             info!(">>> Assigning surplus children");
@@ -956,7 +900,7 @@ impl Assignment {
 mod tests {
     use std::{collections::BTreeSet, str::FromStr};
 
-    use crate::config::{self, Resolution};
+    use crate::config::{Projection, Resolution};
 
     use super::*;
 
@@ -972,7 +916,7 @@ mod tests {
         let config = Config {
             person_resolution: Resolution::MSOA11,
             household_resolution: Resolution::OA11,
-            projection: config::Projection::PPP,
+            projection: Projection::PPP,
             strict: false,
             year: Year(2020),
             data_dir: PathBuf::from_str("data/microsimulation/data")?,
@@ -990,7 +934,7 @@ mod tests {
         let config = Config {
             person_resolution: Resolution::MSOA11,
             household_resolution: Resolution::OA11,
-            projection: config::Projection::PPP,
+            projection: Projection::PPP,
             strict: false,
             year: Year(2020),
             data_dir: PathBuf::from_str("data/microsimulation/data")?,

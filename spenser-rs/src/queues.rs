@@ -25,6 +25,7 @@ fn update_pid_vec(
     None
 }
 
+#[derive(Debug)]
 pub struct Queues {
     pub unmatched: HashSet<PID>,
     pub matched: HashSet<PID>,
