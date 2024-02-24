@@ -18,6 +18,7 @@ impl std::fmt::Display for Resolution {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Projection {
+    #[serde(rename = "ppp")]
     PPP,
 }
 

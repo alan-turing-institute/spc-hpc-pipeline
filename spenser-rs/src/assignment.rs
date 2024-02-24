@@ -1,7 +1,3 @@
-// TODO: to remove
-#![allow(unused_imports)]
-#![allow(dead_code)]
-
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     io::Read,
@@ -9,21 +5,22 @@ use std::{
 };
 
 use anyhow::anyhow;
+use csv::Writer;
 use hashbrown::HashSet;
 use log::{debug, error, info, warn};
 use polars::prelude::*;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use typed_index_collections::TiVec;
 
+use crate::Eth;
 use crate::{
     config::{Config, Year},
-    household,
     person::ChildHRPerson,
     queues::AdultOrChild,
-    return_some, ADULT_AGE, OA,
+    ADULT_AGE, OA,
 };
 use crate::{
     household::{Household, HID},
@@ -33,10 +30,9 @@ use crate::{
     person::{HRPerson, PartnerHRPerson, Person, HRPID, PID},
     MSOA,
 };
-use crate::{Age, Eth, Sex};
 
 // TODO: remove, temporary helper for debugging.
-fn input() {
+fn _input() {
     std::io::stdin().read_exact(&mut [0]).unwrap();
 }
 
@@ -48,7 +44,7 @@ pub fn debug_stats(pid: PID, total_matched: usize, total_unmatched: usize) {
 }
 
 #[derive(Debug)]
-struct Assignment {
+pub struct Assignment {
     pub region: String,
     pub year: Year,
     pub output_dir: PathBuf,
@@ -78,7 +74,7 @@ fn read_geog_lookup(path: &str) -> anyhow::Result<DataFrame> {
 const PERSISTENT_DATA: &str = "data/microsimulation/persistent_data/";
 
 // See example: https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.apply
-fn replace_i32(mapping: &HashMap<i32, i32>) -> impl (Fn(&Series) -> Series) + '_ {
+fn _replace_i32(mapping: &HashMap<i32, i32>) -> impl (Fn(&Series) -> Series) + '_ {
     |series: &Series| -> Series {
         series
             .cast(&DataType::Int32)
@@ -192,12 +188,8 @@ impl Assignment {
         hrp_index.insert("sp".to_string(), vec![4]);
         hrp_index.insert("mix".to_string(), vec![5]);
 
-        // # distribution of partner age/sex/eth by HRP age/sex/eth
         let partner_hrp_dist = read_csv(format!("{PERSISTENT_DATA}/partner_hrp_dist.csv"))?;
-
-        // # distribution of child age/sex/eth by HRP age/sex/eth
         let child_hrp_dist = read_csv(format!("{PERSISTENT_DATA}/child_hrp_dist.csv"))?;
-
         let scotland = region.starts_with('S');
         let mut h_data: TiVec<HID, Household> = read_csv(h_file)?;
         let mut p_data: TiVec<PID, Person> = read_csv(p_file)?;
@@ -584,7 +576,7 @@ impl Assignment {
                 }
                 debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
             } else {
-                println!(
+                warn!(
                     "Out of multi-people, need {} households for {}",
                     h_ref.len(),
                     idx + 1
@@ -894,11 +886,25 @@ impl Assignment {
 
         Ok(())
     }
+
+    pub fn write(&self, region: &str, config: &Config) -> anyhow::Result<()> {
+        // ass_S12000036_MSOA11_2032.csv
+        let path = format!(
+            "data/outputs/ass_{}_{}_{}_rs.csv",
+            region, config.person_resolution, config.year
+        );
+        let mut wtr = Writer::from_path(path)?;
+        // self.p_data
+        //     .iter()
+        //     .for_each(|person| wtr.write_record(person).unwrap());
+        // Ok(())
+        todo!()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeSet, str::FromStr};
+    use std::str::FromStr;
 
     use crate::config::{Projection, Resolution};
 
@@ -940,8 +946,6 @@ mod tests {
             data_dir: PathBuf::from_str("data/microsimulation/data")?,
             profile: false,
         };
-        let mut assignment = Assignment::new("E06000001", &config)?;
-        assignment.run()?;
         let mut assignment = Assignment::new("E09000001", &config)?;
         assignment.run()?;
         Ok(())
