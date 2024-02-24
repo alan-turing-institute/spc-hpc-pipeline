@@ -507,9 +507,21 @@ impl Assignment {
                         .get(&hrp_age)
                         .unwrap_or_else(|| dist_by_e.get(&hrp_eth).unwrap_or(&dist))
                 }),
-                Parent::Couple => dist_by_ae
-                    .get(&(hrp_age, hrp_eth))
-                    .unwrap_or_else(|| panic!("No matching {hrp_age}, {hrp_eth} in distribution.")),
+                Parent::Couple => {
+                    if let Some(dist) = dist_by_ae.get(&(hrp_age, hrp_eth))
+                    // TODO: confirm handling: assignment.py, L437-L440
+                    // .unwrap_or_else(|| panic!("No matching {hrp_age}, {hrp_eth} in distribution.")),
+                    {
+                        dist
+                    } else {
+                        // TODO: update with logging/tracing
+                        println!(
+                            "child-HRP not sampled: {}, {}, {}",
+                            hrp_age, hrp_sex, hrp_eth
+                        );
+                        continue;
+                    }
+                }
             };
             // Sample:: TODO: make sep fn
             let child_sample_id = dist.choose_weighted(&mut self.rng, |item| item.1)?.0;
@@ -525,7 +537,6 @@ impl Assignment {
             if let Some(pid) =
                 queues.sample_person(msoa, age, sex, eth, AdultOrChild::Child, &self.p_data)
             {
-                println!("{}", pid);
                 self.p_data
                     .get_mut(pid)
                     .unwrap_or_else(|| panic!("Invalid {pid}"))
@@ -559,7 +570,47 @@ impl Assignment {
         mark_filled: bool,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
-        todo!()
+        let mut h_ref: Vec<_> = self
+            .h_data
+            .iter_mut()
+            .filter(|household| {
+                // TODO: check condition as for other sample
+                oas.contains(&household.oa)
+                    && household.lc4408_c_ahthuk11.eq(&5)
+                    && household.filled != Some(true)
+            })
+            .collect();
+
+        for (idx, household) in h_ref.iter_mut().enumerate() {
+            let pid = queues.sample_adult_any(msoa);
+            // TODO: create method for assignment part
+            if let Some(pid) = pid {
+                self.p_data
+                    .get_mut(pid)
+                    .unwrap_or_else(|| panic!("Invalid {pid}"))
+                    // TODO: fix the household HID field to have HID type
+                    .hid = Some(HID(household.hid.to_owned() as usize));
+                // # mark households as filled if appropriate
+                // TODO: fix integer handling
+                if mark_filled && household.lc4404_c_sizhuk11 == nocc as i32 {
+                    household.filled = Some(true);
+                }
+                println!(
+                    "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
+                    queues.unmatched.len(),
+                    queues.matched.len(),
+                    self.fail
+                );
+            } else {
+                println!(
+                    "warning: out of multi-people, need {} households for {}",
+                    h_ref.len(),
+                    idx + 1
+                );
+                break;
+            }
+        }
+        Ok(())
     }
     fn fill_communal(
         &mut self,
@@ -567,7 +618,76 @@ impl Assignment {
         oas: &HashSet<OA>,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
-        todo!()
+        let mut c_ref: Vec<_> = self
+            .h_data
+            .iter_mut()
+            .filter(|household| {
+                oas.contains(&household.oa) && household.qs420_cell > -1
+                // TODO: check this condition
+                // && household.filled != Some(true)
+            })
+            .collect();
+
+        for (_, household) in c_ref.iter_mut().enumerate() {
+            let ctype = household.qs420_cell;
+
+            let nocc = household.communal_size;
+            if nocc > 0 {
+                // TODO: refactor into method on queues
+                // Get samples of nocc size
+                let mut pids = vec![];
+                while i32::try_from(pids.len()).expect("Not i32") < nocc {
+                    let pid = if ctype < 22 {
+                        queues.sample_person_over_75(msoa)
+                    } else if ctype < 27 {
+                        queues.sample_person_19_to_25(msoa)
+                    } else {
+                        queues.sample_person_over_16(msoa)
+                    };
+                    if let Some(pid) = pid {
+                        pids.push(pid);
+                    } else {
+                        break;
+                    }
+                }
+                // TODO: can nocc be made usize in data schema?
+                if i32::try_from(pids.len()).expect("Not i32").lt(&nocc) {
+                    // TODO: warning logging
+                    println!("cannot assign to communal: {:?}", household);
+                    // Put PIDs back
+                    // TODO: refactor into method on queues
+                    while let Some(pid) = pids.pop() {
+                        let map = if ctype < 22 {
+                            &mut queues.people_by_area_over_75
+                        } else if ctype < 27 {
+                            &mut queues.people_by_area_19_to_25
+                        } else {
+                            &mut queues.people_by_area_over_16
+                        };
+                        map.get_mut(msoa)
+                            .expect("MSOA does not exist in lookup")
+                            .push(pid);
+                    }
+                }
+
+                while let Some(pid) = pids.pop() {
+                    self.p_data
+                        .get_mut(pid)
+                        .unwrap_or_else(|| panic!("Invalid {pid}"))
+                        // TODO: fix the household HID field to have HID type
+                        .hid = Some(HID(household.hid.to_owned() as usize));
+
+                    println!(
+                        "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
+                        queues.unmatched.len(),
+                        queues.matched.len(),
+                        self.fail
+                    );
+                }
+            }
+            household.filled = Some(true);
+        }
+        Ok(())
     }
     fn assign_surplus_adults(
         &mut self,
@@ -645,29 +765,29 @@ impl Assignment {
             // // self.stats()
 
             // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
-            println!("assigning child 1 to couple households");
+            println!("> assigning child 1 to couple households");
             // // self.__sample_couple_child(msoa, oas, 3, mark_filled=True)
             self.sample_child(msoa, &oas, 3, true, Parent::Couple, &mut queues)?;
             // // self.stats()
 
             // // # TODO if partner hasnt been assigned then household may be incorrectly marked filled
-            println!("assigning child 2 to single-parent households");
+            println!("> assigning child 2 to single-parent households");
             // // self.__sample_couple_child(msoa, oas, 4, mark_filled=False)
             self.sample_child(msoa, &oas, 4, true, Parent::Couple, &mut queues)?;
             // // self.stats()
 
-            // println!("multi-person households");
+            println!("> multi-person households");
             // // self.__fill_multi(msoa, oas, 2)
-            // self.fill_multi(msoa, &oas, 2, true, &mut queues)?;
+            self.fill_multi(msoa, &oas, 2, true, &mut queues)?;
             // // self.__fill_multi(msoa, oas, 3)
-            // self.fill_multi(msoa, &oas, 3, true, &mut queues)?;
+            self.fill_multi(msoa, &oas, 3, true, &mut queues)?;
             // // self.__fill_multi(msoa, oas, 4, mark_filled=False)
-            // self.fill_multi(msoa, &oas, 4, false, &mut queues)?;
+            self.fill_multi(msoa, &oas, 4, false, &mut queues)?;
             // // self.stats()
 
-            // println!("assigning people to communal establishments");
+            println!("> assigning people to communal establishments");
             // // self.__fill_communal(msoa, oas)
-            // self.fill_communal(msoa, &oas, &mut queues)?;
+            self.fill_communal(msoa, &oas, &mut queues)?;
             // // self.stats()
 
             // println!("assigning surplus adults");

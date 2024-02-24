@@ -34,6 +34,9 @@ pub struct Queues {
     adults_by_area: BTreeMap<MSOA, Vec<PID>>,
     children_by_area_se: BTreeMap<(MSOA, Sex, Eth), Vec<PID>>,
     children_by_area_s: BTreeMap<(MSOA, Sex), Vec<PID>>,
+    pub people_by_area_over_75: BTreeMap<MSOA, Vec<PID>>,
+    pub people_by_area_19_to_25: BTreeMap<MSOA, Vec<PID>>,
+    pub people_by_area_over_16: BTreeMap<MSOA, Vec<PID>>,
 }
 
 pub enum AdultOrChild {
@@ -70,6 +73,12 @@ fn get_closest(age: Age, v: &Vec<PID>, p_data: &TiVec<PID, Person>) -> Option<(u
     }
 }
 
+macro_rules! shuffle {
+    ($v:ident, $rng:ident) => {
+        $v.iter_mut().for_each(|(_, v)| v.shuffle($rng));
+    };
+}
+
 impl Queues {
     // Construct queues for sampling and matching
     // ---
@@ -91,7 +100,9 @@ impl Queues {
         let mut adults_by_area: BTreeMap<MSOA, Vec<PID>> = BTreeMap::new();
         let mut children_by_area_se: BTreeMap<(MSOA, Sex, Eth), Vec<PID>> = BTreeMap::new();
         let mut children_by_area_s: BTreeMap<(MSOA, Sex), Vec<PID>> = BTreeMap::new();
-
+        let mut people_by_area_over_75: BTreeMap<MSOA, Vec<PID>> = BTreeMap::new();
+        let mut people_by_area_19_to_25: BTreeMap<MSOA, Vec<PID>> = BTreeMap::new();
+        let mut people_by_area_over_16: BTreeMap<MSOA, Vec<PID>> = BTreeMap::new();
         p_data.iter_enumerated().for_each(|(idx, person)| {
             let area = person.msoa.to_owned();
             let age = person.age;
@@ -103,6 +114,31 @@ impl Queues {
                     el.push(idx);
                 })
                 .or_insert(vec![idx]);
+            if age > Age(75) {
+                people_by_area_over_75
+                    .entry(area.clone())
+                    .and_modify(|el| {
+                        el.push(idx);
+                    })
+                    .or_insert(vec![idx]);
+            }
+            if age > Age(18) && age < Age(26) {
+                people_by_area_19_to_25
+                    .entry(area.clone())
+                    .and_modify(|el| {
+                        el.push(idx);
+                    })
+                    .or_insert(vec![idx]);
+            }
+            if age > Age(16) {
+                people_by_area_over_16
+                    .entry(area.clone())
+                    .and_modify(|el| {
+                        el.push(idx);
+                    })
+                    .or_insert(vec![idx]);
+            }
+
             if age > ADULT_AGE {
                 adults_by_area_se
                     .entry((area.clone(), sex, eth))
@@ -139,23 +175,15 @@ impl Queues {
         });
 
         // Shuffle queues
-        // TODO: rewrite with macro
-        people_by_area_ase
-            .iter_mut()
-            .for_each(|(_, v)| v.shuffle(rng));
-        adults_by_area_se
-            .iter_mut()
-            .for_each(|(_, v)| v.shuffle(rng));
-        adults_by_area_s
-            .iter_mut()
-            .for_each(|(_, v)| v.shuffle(rng));
-        adults_by_area.iter_mut().for_each(|(_, v)| v.shuffle(rng));
-        children_by_area_se
-            .iter_mut()
-            .for_each(|(_, v)| v.shuffle(rng));
-        children_by_area_s
-            .iter_mut()
-            .for_each(|(_, v)| v.shuffle(rng));
+        shuffle!(people_by_area_ase, rng);
+        shuffle!(adults_by_area_se, rng);
+        shuffle!(adults_by_area_s, rng);
+        shuffle!(adults_by_area, rng);
+        shuffle!(children_by_area_se, rng);
+        shuffle!(children_by_area_s, rng);
+        shuffle!(people_by_area_over_75, rng);
+        shuffle!(people_by_area_19_to_25, rng);
+        shuffle!(people_by_area_over_16, rng);
 
         Self {
             people_by_area_ase,
@@ -164,9 +192,41 @@ impl Queues {
             adults_by_area,
             children_by_area_se,
             children_by_area_s,
+            people_by_area_over_75,
+            people_by_area_19_to_25,
+            people_by_area_over_16,
             matched: HashSet::new(),
             unmatched,
         }
+    }
+
+    // TODO: add wrapper method for communal household person sampling
+
+    pub fn sample_person_over_75(&mut self, msoa: &MSOA) -> Option<PID> {
+        let v = self
+            .people_by_area_over_75
+            .get_mut(msoa)
+            .expect("Invalid MSOA.");
+        update_pid_vec(v, &mut self.matched, &mut self.unmatched)
+    }
+    pub fn sample_person_over_16(&mut self, msoa: &MSOA) -> Option<PID> {
+        let v = self
+            .people_by_area_over_16
+            .get_mut(msoa)
+            .expect("Invalid MSOA.");
+        update_pid_vec(v, &mut self.matched, &mut self.unmatched)
+    }
+    pub fn sample_person_19_to_25(&mut self, msoa: &MSOA) -> Option<PID> {
+        let v = self
+            .people_by_area_19_to_25
+            .get_mut(msoa)
+            .expect("Invalid MSOA.");
+        update_pid_vec(v, &mut self.matched, &mut self.unmatched)
+    }
+
+    pub fn sample_adult_any(&mut self, msoa: &MSOA) -> Option<PID> {
+        let v = self.adults_by_area.get_mut(msoa).expect("Invalid MSOA.");
+        update_pid_vec(v, &mut self.matched, &mut self.unmatched)
     }
 
     /// TODO: add doc comment
