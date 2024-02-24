@@ -22,7 +22,7 @@ use crate::{
     config::{Config, Year},
     person::ChildHRPerson,
     queues::AdultOrChild,
-    return_some, OA,
+    return_some, ADULT_AGE, OA,
 };
 use crate::{
     household::{Household, HID},
@@ -695,7 +695,47 @@ impl Assignment {
         oas: &HashSet<OA>,
         queues: &mut Queues,
     ) -> anyhow::Result<()> {
-        todo!()
+        let p_unassigned: Vec<&mut Person> = self
+            .p_data
+            .iter_mut()
+            .filter_map(|person| {
+                if person.msoa.eq(msoa) && person.age > ADULT_AGE && person.hid.is_none() {
+                    Some(person)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let n_p = p_unassigned.len();
+
+        let mut h_candidates: Vec<_> = self
+            .h_data
+            .iter_mut()
+            .filter(|household| {
+                oas.contains(&household.oa)
+                    && household.lc4408_c_ahthuk11.eq(&5)
+                    && household.filled != Some(true)
+            })
+            .collect();
+        if h_candidates.len() > 0 {
+            for person in p_unassigned {
+                let h_sample = h_candidates
+                    .choose(&mut self.rng)
+                    .expect("Cannot be empty.");
+                // TODO: fix conversion between sample.hid and HID
+                person.hid = Some(HID(h_sample.hid as usize));
+                let pid = PID(person.pid);
+                queues.matched.insert(pid);
+                queues.unmatched.remove(&pid);
+                println!(
+                    "Assigned: {pid:9}, unmatched: {:6}, matched: {:6}, failed: {:6}",
+                    queues.unmatched.len(),
+                    queues.matched.len(),
+                    self.fail
+                );
+            }
+        }
+        Ok(())
     }
 
     fn assign_surplus_children(
@@ -790,8 +830,8 @@ impl Assignment {
             self.fill_communal(msoa, &oas, &mut queues)?;
             // // self.stats()
 
-            // println!("assigning surplus adults");
-            // self.assign_surplus_adults(msoa, &oas, &mut queues)?;
+            println!("> assigning surplus adults");
+            self.assign_surplus_adults(msoa, &oas, &mut queues)?;
             // // self.stats()
 
             // println!("assigning surplus children");
@@ -847,6 +887,8 @@ mod tests {
             profile: false,
         };
         let mut assignment = Assignment::new("E06000001", &config)?;
+        // TODO: add as test data
+        // let mut assignment = Assignment::new("E09000001", &config)?;
         assignment.run()?;
         Ok(())
     }
