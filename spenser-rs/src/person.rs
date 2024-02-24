@@ -20,7 +20,7 @@ impl From<PID> for usize {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Person {
     #[serde(rename = "PID")]
     pub pid: usize,

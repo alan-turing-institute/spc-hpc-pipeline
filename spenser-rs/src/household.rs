@@ -4,7 +4,7 @@ use crate::{person::PID, Eth, OA};
 
 type UInt = i32;
 type Int = i32;
-#[derive(Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct HID(pub usize);
 impl std::fmt::Display for HID {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

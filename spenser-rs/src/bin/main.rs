@@ -22,5 +22,7 @@ fn main() -> anyhow::Result<()> {
     info!("Config: {}", serde_json::to_string(&config).unwrap());
     let mut assignment = Assignment::new(region, &config)?;
     assignment.run()?;
+    // TODO: implement write
+    // assignment.write(&region, &config)?;
     Ok(())
 }

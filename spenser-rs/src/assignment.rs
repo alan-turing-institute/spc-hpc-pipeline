@@ -12,7 +12,7 @@ use polars::prelude::*;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use typed_index_collections::TiVec;
 
 use crate::Eth;
@@ -223,10 +223,15 @@ impl Assignment {
             p_data = map_eth(p_data, &eth_mapping)?;
         } else {
             // TODO: check the mapping
+            let eth_mapping = [(-1, 1), (1, 1), (8, 2), (9, 3), (15, 4), (18, 5), (22, 6)]
+                .into_iter()
+                .map(|(x, y)| (Eth(x), Eth(y)))
+                .collect::<HashMap<Eth, Eth>>();
             let eth_remapping = [(-1, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 8)]
                 .into_iter()
                 .map(|(x, y)| (Eth(x), Eth(y)))
                 .collect::<HashMap<Eth, Eth>>();
+            p_data = map_eth(p_data, &eth_mapping)?;
             p_data = map_eth(p_data, &eth_remapping)?;
             h_data = map_eth(h_data, &eth_remapping)?;
         }
@@ -887,19 +892,26 @@ impl Assignment {
         Ok(())
     }
 
-    pub fn write(&self, region: &str, config: &Config) -> anyhow::Result<()> {
-        // ass_S12000036_MSOA11_2032.csv
-        let path = format!(
-            "data/outputs/ass_{}_{}_{}_rs.csv",
-            region, config.person_resolution, config.year
-        );
-        let mut wtr = Writer::from_path(path)?;
-        // self.p_data
-        //     .iter()
-        //     .for_each(|person| wtr.write_record(person).unwrap());
-        // Ok(())
-        todo!()
-    }
+    // TODO: implement write record
+    // pub fn write(&self, region: &str, config: &Config) -> anyhow::Result<()> {
+    //     let dir = "data/outputs/";
+    //     std::fs::create_dir_all(dir)?;
+    //     let path = format!(
+    //         "{dir}/rs_ass_{}_{}_{}.csv",
+    //         region, config.person_resolution, config.year
+    //     );
+    //     let mut writer = Writer::from_path(path)?;
+    //     writer.serialize(&self.p_data)?;
+    //     writer.flush()?;
+    //     let path = format!(
+    //         "{dir}/rs_ass_hh_{}_{}_{}.csv",
+    //         region, config.household_resolution, config.year
+    //     );
+    //     let mut writer = Writer::from_path(path)?;
+    //     writer.serialize(&self.h_data)?;
+    //     writer.flush()?;
+    //     Ok(())
+    // }
 }
 
 #[cfg(test)]
