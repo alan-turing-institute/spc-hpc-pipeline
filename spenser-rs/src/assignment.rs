@@ -894,25 +894,36 @@ impl Assignment {
     }
 
     // TODO: implement write record
-    // pub fn write(&self, region: &str, config: &Config) -> anyhow::Result<()> {
-    //     let dir = "data/outputs/";
-    //     std::fs::create_dir_all(dir)?;
-    //     let path = format!(
-    //         "{dir}/rs_ass_{}_{}_{}.csv",
-    //         region, config.person_resolution, config.year
-    //     );
-    //     let mut writer = Writer::from_path(path)?;
-    //     writer.serialize(&self.p_data)?;
-    //     writer.flush()?;
-    //     let path = format!(
-    //         "{dir}/rs_ass_hh_{}_{}_{}.csv",
-    //         region, config.household_resolution, config.year
-    //     );
-    //     let mut writer = Writer::from_path(path)?;
-    //     writer.serialize(&self.h_data)?;
-    //     writer.flush()?;
-    //     Ok(())
-    // }
+    pub fn write(&self, region: &str, config: &Config) -> anyhow::Result<()> {
+        let dir = "outputs/";
+        std::fs::create_dir_all(dir)?;
+
+        // Serialize people
+        // TODO: wrap in function
+        let mut writer = Writer::from_writer(vec![]);
+        self.p_data.iter().for_each(|person| {
+            writer.serialize(person).unwrap();
+        });
+        let data = String::from_utf8(writer.into_inner()?)?;
+        let path = format!(
+            "{dir}/rs_ass_{}_{}_{}.csv",
+            region, config.person_resolution, config.year
+        );
+        std::fs::write(path, data)?;
+
+        // Serialize households
+        let mut writer = Writer::from_writer(vec![]);
+        self.h_data.iter().for_each(|household| {
+            writer.serialize(household).unwrap();
+        });
+        let data = String::from_utf8(writer.into_inner()?)?;
+        let path = format!(
+            "{dir}/rs_ass_hh_{}_{}_{}.csv",
+            region, config.household_resolution, config.year
+        );
+        std::fs::write(path, data)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
