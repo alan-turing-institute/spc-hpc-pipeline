@@ -71,7 +71,7 @@ fn read_geog_lookup(path: &str) -> anyhow::Result<DataFrame> {
 }
 
 // TODO: refine paths
-const PERSISTENT_DATA: &str = "data/microsimulation/persistent_data/";
+const PERSISTENT_DATA: &str = "persistent_data/";
 
 // See example: https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.apply
 fn _replace_i32(mapping: &HashMap<i32, i32>) -> impl (Fn(&Series) -> Series) + '_ {
