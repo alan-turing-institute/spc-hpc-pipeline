@@ -19,7 +19,6 @@ pub(crate) use return_some;
 
 const ADULT_AGE: Age = Age(16);
 
-// TODO: use type instead of string in assignment
 #[derive(Hash, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MSOA(String);
 

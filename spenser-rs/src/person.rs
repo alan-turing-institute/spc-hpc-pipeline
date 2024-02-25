@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_deserialize_person() -> anyhow::Result<()> {
-        let test_csv = std::fs::read_to_string("data/tests/test_person.csv")?;
+        let test_csv = std::fs::read_to_string("tests/data/ssm_E09000001_MSOA11_ppp_2020.csv")?;
         let mut rdr = csv::Reader::from_reader(test_csv.as_bytes());
         for result in rdr.deserialize() {
             let record: Person = result?;
@@ -128,7 +128,7 @@ mod tests {
     }
     #[test]
     fn test_deserialize_hrp() -> anyhow::Result<()> {
-        let test_csv = std::fs::read_to_string("data/tests/test_hrp_sgl.csv")?;
+        let test_csv = std::fs::read_to_string("tests/data/test_hrp_sgl.csv")?;
         let mut rdr = csv::Reader::from_reader(test_csv.as_bytes());
         for result in rdr.deserialize() {
             let record: HRPerson = result?;

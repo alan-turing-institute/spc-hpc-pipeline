@@ -51,13 +51,3 @@ pub struct Config {
     pub data_dir: PathBuf,
     pub profile: bool,
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::config::Year;
-
-    #[test]
-    fn test_year() {
-        println!("{}", Year(10));
-    }
-}

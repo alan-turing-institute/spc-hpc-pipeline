@@ -413,6 +413,7 @@ impl Assignment {
                 }
                 debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
             } else {
+                // TODO consider returning error variant instead of logging
                 error!("No partner match!");
             }
         }
@@ -930,24 +931,22 @@ mod tests {
     }
 
     #[test]
-    fn test_assignment() -> anyhow::Result<()> {
+    fn test_assignment_new() -> anyhow::Result<()> {
         let config = Config {
             person_resolution: Resolution::MSOA11,
             household_resolution: Resolution::OA11,
             projection: Projection::PPP,
             strict: false,
             year: Year(2020),
-            data_dir: PathBuf::from_str("data/microsimulation/data")?,
+            data_dir: PathBuf::from_str("tests/data/")?,
             profile: false,
         };
-        let assignment = Assignment::new("E06000001", &config)?;
-        println!("{:?}", assignment);
-
+        Assignment::new("E09000001", &config)?;
         Ok(())
     }
 
     #[test]
-    fn test_run() -> anyhow::Result<()> {
+    fn test_assignment_run() -> anyhow::Result<()> {
         env_logger::init();
         let config = Config {
             person_resolution: Resolution::MSOA11,
@@ -955,11 +954,10 @@ mod tests {
             projection: Projection::PPP,
             strict: false,
             year: Year(2020),
-            data_dir: PathBuf::from_str("data/microsimulation/data")?,
+            data_dir: PathBuf::from_str("tests/data/")?,
             profile: false,
         };
-        let mut assignment = Assignment::new("E09000001", &config)?;
-        assignment.run()?;
+        Assignment::new("E09000001", &config)?.run()?;
         Ok(())
     }
 }

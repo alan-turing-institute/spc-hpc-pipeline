@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_deserialize_hh() -> anyhow::Result<()> {
-        let test_csv = std::fs::read_to_string("data/tests/test_hh.csv")?;
+        let test_csv = std::fs::read_to_string("tests/data/ssm_hh_E09000001_OA11_2020.csv")?;
         let mut rdr = csv::Reader::from_reader(test_csv.as_bytes());
         for result in rdr.deserialize() {
             let record: Household = result?;
