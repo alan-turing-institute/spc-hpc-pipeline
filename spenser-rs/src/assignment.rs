@@ -146,7 +146,7 @@ enum Parent {
 }
 
 impl Assignment {
-    pub fn new(region: &str, config: &Config) -> anyhow::Result<Assignment> {
+    pub fn new(region: &str, rng_seed: u64, config: &Config) -> anyhow::Result<Assignment> {
         let h_file = config
             .data_dir
             .join(format!(
@@ -235,7 +235,7 @@ impl Assignment {
             p_data = map_eth(p_data, &eth_remapping)?;
             h_data = map_eth(h_data, &eth_remapping)?;
         }
-        let mut rng = StdRng::seed_from_u64(0);
+        let mut rng = StdRng::seed_from_u64(rng_seed);
         let queues = Queues::new(&p_data, &mut rng);
         Ok(Self {
             region: region.to_owned(),
@@ -1097,7 +1097,7 @@ mod tests {
             data_dir: PathBuf::from_str("tests/data/")?,
             profile: false,
         };
-        Assignment::new("E09000001", &config)?;
+        Assignment::new("E09000001", 0, &config)?;
         Ok(())
     }
 
@@ -1113,7 +1113,7 @@ mod tests {
             data_dir: PathBuf::from_str("tests/data/")?,
             profile: false,
         };
-        Assignment::new("E09000001", &config)?.run()?;
+        Assignment::new("E09000001", 0, &config)?.run()?;
         Ok(())
     }
 }
