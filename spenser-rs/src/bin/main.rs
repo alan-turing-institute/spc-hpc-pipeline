@@ -19,7 +19,7 @@ fn main() -> anyhow::Result<()> {
     let matches = cli().get_matches();
     let region = matches.get_one::<String>("region").unwrap();
     let file_path: &String = matches.get_one::<String>("config").unwrap();
-    let rng_seed: u64 = *matches.get_one::<u64>("config").unwrap_or(&0);
+    let rng_seed: u64 = *matches.get_one::<u64>("rng_seed").unwrap_or(&0);
 
     let config: Config = serde_json::from_str(&std::fs::read_to_string(file_path)?)?;
 
