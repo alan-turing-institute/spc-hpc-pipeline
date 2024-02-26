@@ -800,6 +800,152 @@ impl Assignment {
         )
     }
 
+
+    pub fn check(&self) -> anyhow::Result<()> {
+        info!("---");
+        info!("Checking...");
+        info!("---");
+        info!(
+            "Occupied households without HRP: {}",
+            self.h_data
+                .iter()
+                .filter(|household| household.lc4408_c_ahthuk11 > 0 && household.hrpid.is_none())
+                .count()
+        );
+        info!(
+            "Occupied households not filled: {} of: {}",
+            self.h_data
+                .iter()
+                .filter(|household| household.lc4408_c_ahthuk11 > 0 && household.filled.is_none())
+                .count(),
+            self.h_data
+                .iter()
+                .filter(|household| household.lc4408_c_ahthuk11 > 0)
+                .count()
+        );
+        info!("Single-occupant households not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| household.lc4408_c_ahthuk11.eq(&1) && household.filled.is_none())
+                .count(),
+
+        );
+        info!("Single-parent one-child households not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    household.lc4408_c_ahthuk11.eq(&4)
+                    && household.lc4404_c_sizhuk11.eq(&2)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Single-parent two-child households not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    household.lc4408_c_ahthuk11.eq(&4)
+                    && household.lc4404_c_sizhuk11.eq(&3)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Single-parent 3+ households not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    household.lc4408_c_ahthuk11.eq(&4)
+                    && household.lc4404_c_sizhuk11.eq(&4)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Couple households with no children not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    [2, 3].contains(&household.lc4408_c_ahthuk11)
+                    && household.lc4404_c_sizhuk11.eq(&2)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Couple households with one child not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    [2, 3].contains(&household.lc4408_c_ahthuk11)
+                    && household.lc4404_c_sizhuk11.eq(&3)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Couple households with 2+ children not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    [2, 3].contains(&household.lc4408_c_ahthuk11)
+                    && household.lc4404_c_sizhuk11.eq(&4)
+                    // TODO: shoild this be .ge(&4) if it is 2+
+                    // && household.lc4404_c_sizhuk11.eq(&4)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Mixed (2,3) households not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    household.lc4408_c_ahthuk11.eq(&5)
+                    && household.lc4404_c_sizhuk11.lt(&4)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Mixed (4+) households not filled: {}",
+            self.h_data
+                .iter()
+                .filter(|household| {
+                    household.lc4408_c_ahthuk11.eq(&5)
+                    // TODO: should this be given 4+
+                    // && household.lc4404_c_sizhuk11.ge(&4)
+                    && household.filled.is_none()
+                })
+                .count(),
+        );
+        info!("Adults not assigned {} of {}",
+            self.p_data
+                .iter()
+                .filter(|person| {
+                    person.age.gt(&ADULT_AGE)
+                    && person.hid.is_none()
+                })
+                .count(),
+                self.p_data
+                .iter()
+                .filter(|person| {
+                    person.age.gt(&ADULT_AGE)
+                })
+                .count()
+        );
+        info!("Children not assigned {} of {}",
+            self.p_data
+                .iter()
+                .filter(|person| {
+                    person.age.le(&ADULT_AGE)
+                    && person.hid.is_none()
+                })
+                .count(),
+                self.p_data
+                .iter()
+                .filter(|person| {
+                    person.age.le(&ADULT_AGE)
+                })
+                .count()
+        );
+        Ok(())
+    }
+
     // TODO: add type for LAD
     pub fn run(&mut self) -> anyhow::Result<()> {
         // Create queues

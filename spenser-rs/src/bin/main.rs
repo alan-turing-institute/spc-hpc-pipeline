@@ -20,12 +20,14 @@ fn main() -> anyhow::Result<()> {
     let file_path: &String = matches.get_one::<String>("config").unwrap();
 
     let config: Config = serde_json::from_str(&std::fs::read_to_string(file_path)?)?;
+
     info!("Config: {}", serde_json::to_string(&config).unwrap());
 
     let mut assignment = Assignment::new(region, &config)?;
 
     assignment.run()?;
 
+    assignment.check()?;
     assignment.write(region, &config)?;
     Ok(())
 }
