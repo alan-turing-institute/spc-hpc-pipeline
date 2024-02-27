@@ -80,6 +80,17 @@ macro_rules! shuffle {
     };
 }
 
+/// Given an MSOA, return a PID if one exists and update matched and unmatched sets.
+fn get_sample(
+    map: &mut BTreeMap<MSOA, Vec<PID>>,
+    msoa: &MSOA,
+    matched: &mut HashSet<PID>,
+    unmatched: &mut HashSet<PID>,
+) -> Option<PID> {
+    let v = map.get_mut(msoa).expect("Invalid MSOA.");
+    update_pid_vec(v, matched, unmatched)
+}
+
 impl Queues {
     // Construct queues for sampling and matching
     // ---
@@ -201,28 +212,29 @@ impl Queues {
         }
     }
 
-    // TODO: add wrapper method for communal household person sampling
-
     pub fn sample_person_over_75(&mut self, msoa: &MSOA) -> Option<PID> {
-        let v = self
-            .people_by_area_over_75
-            .get_mut(msoa)
-            .expect("Invalid MSOA.");
-        update_pid_vec(v, &mut self.matched, &mut self.unmatched)
+        get_sample(
+            &mut self.people_by_area_over_75,
+            msoa,
+            &mut self.matched,
+            &mut self.unmatched,
+        )
     }
     pub fn sample_person_over_16(&mut self, msoa: &MSOA) -> Option<PID> {
-        let v = self
-            .people_by_area_over_16
-            .get_mut(msoa)
-            .expect("Invalid MSOA.");
-        update_pid_vec(v, &mut self.matched, &mut self.unmatched)
+        get_sample(
+            &mut self.people_by_area_over_16,
+            msoa,
+            &mut self.matched,
+            &mut self.unmatched,
+        )
     }
     pub fn sample_person_19_to_25(&mut self, msoa: &MSOA) -> Option<PID> {
-        let v = self
-            .people_by_area_19_to_25
-            .get_mut(msoa)
-            .expect("Invalid MSOA.");
-        update_pid_vec(v, &mut self.matched, &mut self.unmatched)
+        get_sample(
+            &mut self.people_by_area_19_to_25,
+            msoa,
+            &mut self.matched,
+            &mut self.unmatched,
+        )
     }
 
     pub fn sample_adult_any(&mut self, msoa: &MSOA) -> Option<PID> {
