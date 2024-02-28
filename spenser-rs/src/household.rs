@@ -17,6 +17,18 @@ impl From<usize> for HID {
     }
 }
 
+pub fn serialize_bool<S>(bool: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::ser::Serializer,
+{
+    let s = match bool {
+        Some(true) => "True",
+        Some(false) => "False",
+        None => "",
+    };
+    serializer.serialize_str(s)
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Household {
     #[serde(rename = "HID")]
@@ -53,6 +65,7 @@ pub struct Household {
     #[serde(rename = "HRPID")]
     pub hrpid: Option<PID>,
     #[serde(rename = "FILLED")]
+    #[serde(serialize_with = "serialize_bool")]
     pub filled: Option<bool>,
 }
 
