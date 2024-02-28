@@ -550,7 +550,7 @@ impl Assignment {
         &mut self,
         msoa: &MSOA,
         oas: &HashSet<OA>,
-        nocc: usize,
+        nocc: i32,
         mark_filled: bool,
     ) -> anyhow::Result<()> {
         let mut h_ref: Vec<_> = self
@@ -574,7 +574,7 @@ impl Assignment {
                     .hid = Some(household.hid);
                 // # mark households as filled if appropriate
                 // TODO: fix integer handling
-                if mark_filled && household.lc4404_c_sizhuk11 == nocc as i32 {
+                if mark_filled && household.lc4404_c_sizhuk11 == nocc {
                     household.filled = Some(true);
                 }
                 debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{person::PID, Eth, OA};
 
-type UInt = i32;
+type UInt = u32;
 type Int = i32;
 #[derive(Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct HID(pub usize);
@@ -37,27 +37,28 @@ pub struct Household {
     // TODO: should be OA? Use import of wrapper types instead.
     pub oa: OA,
     #[serde(rename = "LC4402_C_TYPACCOM")]
-    pub lc4402_c_typaccom: UInt,
+    pub lc4402_c_typaccom: Int,
     #[serde(rename = "QS420_CELL")]
+    // TODO check
     pub qs420_cell: Int,
     #[serde(rename = "LC4402_C_TENHUK11")]
-    pub lc4402_c_tenhuk11: UInt,
+    pub lc4402_c_tenhuk11: Int,
     #[serde(rename = "LC4408_C_AHTHUK11")]
     pub lc4408_c_ahthuk11: Int,
     #[serde(rename = "CommunalSize")]
     pub communal_size: Int,
     #[serde(rename = "LC4404_C_SIZHUK11")]
-    pub lc4404_c_sizhuk11: UInt,
+    pub lc4404_c_sizhuk11: Int,
     #[serde(rename = "LC4404_C_ROOMS")]
-    pub lc4404_c_rooms: UInt,
+    pub lc4404_c_rooms: Int,
     #[serde(rename = "LC4405EW_C_BEDROOMS")]
-    pub lc4405ew_c_bedrooms: UInt,
+    pub lc4405ew_c_bedrooms: Int,
     #[serde(rename = "LC4408EW_C_PPBROOMHEW11")]
     pub lc4408ew_c_ppbroomhew11: Int,
     #[serde(rename = "LC4402_C_CENHEATHUK11")]
     pub lc4402_c_cenheathuk11: UInt,
     #[serde(rename = "LC4605_C_NSSEC")]
-    pub lc4605_c_nssec: UInt,
+    pub lc4605_c_nssec: Int,
     #[serde(rename = "LC4202_C_ETHHUK11")]
     pub lc4202_c_ethhuk11: Eth,
     #[serde(rename = "LC4202_C_CARSNO")]
