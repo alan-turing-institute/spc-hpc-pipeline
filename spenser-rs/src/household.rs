@@ -20,7 +20,7 @@ impl From<usize> for HID {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Household {
     #[serde(rename = "HID")]
-    pub hid: Int,
+    pub hid: HID,
     #[serde(rename = "Area")]
     // TODO: should be OA? Use import of wrapper types instead.
     pub oa: OA,

@@ -23,7 +23,7 @@ impl From<PID> for usize {
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Person {
     #[serde(rename = "PID")]
-    pub pid: usize,
+    pub pid: PID,
     #[serde(rename = "Area")]
     pub msoa: MSOA,
     #[serde(rename = "DC1117EW_C_SEX")]

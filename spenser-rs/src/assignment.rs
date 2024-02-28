@@ -303,7 +303,7 @@ impl Assignment {
                     self.p_data
                         .get_mut(pid)
                         .unwrap_or_else(|| panic!("Invalid {pid}"))
-                        .hid = Some(HID(household.hid.to_owned() as usize));
+                        .hid = Some(household.hid);
 
                     // If single person household, filled
                     if household.lc4408_c_ahthuk11 == 1 {
@@ -404,8 +404,7 @@ impl Assignment {
                 self.p_data
                     .get_mut(pid)
                     .unwrap_or_else(|| panic!("Invalid {pid}"))
-                    // TODO: fix the household HID field to have HID type
-                    .hid = Some(HID(household.hid.to_owned() as usize));
+                    .hid = Some(household.hid);
 
                 // If single person household, filled
                 if household.lc4404_c_sizhuk11 == 2 {
@@ -531,8 +530,7 @@ impl Assignment {
                 self.p_data
                     .get_mut(pid)
                     .unwrap_or_else(|| panic!("Invalid {pid}"))
-                    // TODO: fix the household HID field to have HID type
-                    .hid = Some(HID(household.hid.to_owned() as usize));
+                    .hid = Some(household.hid);
                 if mark_filled {
                     household.filled = Some(true)
                 }
@@ -573,8 +571,7 @@ impl Assignment {
                 self.p_data
                     .get_mut(pid)
                     .unwrap_or_else(|| panic!("Invalid {pid}"))
-                    // TODO: fix the household HID field to have HID type
-                    .hid = Some(HID(household.hid.to_owned() as usize));
+                    .hid = Some(household.hid);
                 // # mark households as filled if appropriate
                 // TODO: fix integer handling
                 if mark_filled && household.lc4404_c_sizhuk11 == nocc as i32 {
@@ -650,8 +647,7 @@ impl Assignment {
                     self.p_data
                         .get_mut(pid)
                         .unwrap_or_else(|| panic!("Invalid {pid}"))
-                        // TODO: fix the household HID field to have HID type
-                        .hid = Some(HID(household.hid.to_owned() as usize));
+                        .hid = Some(household.hid);
                     debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
                 }
             }
@@ -686,9 +682,8 @@ impl Assignment {
                 let h_sample = h_candidates
                     .choose(&mut self.rng)
                     .expect("Cannot be empty.");
-                // TODO: fix conversion between sample.hid and HID
-                person.hid = Some(HID(h_sample.hid as usize));
-                let pid = PID(person.pid);
+                person.hid = Some(h_sample.hid);
+                let pid = person.pid;
                 self.queues.matched.insert(pid);
                 self.queues.unmatched.remove(&pid);
                 debug_stats(pid, self.queues.matched.len(), self.queues.unmatched.len());
@@ -736,9 +731,8 @@ impl Assignment {
                     let h_sample = h_candidates
                         .choose(&mut self.rng)
                         .expect("Cannot be empty.");
-                    // TODO: fix conversion between sample.hid and HID
-                    person.hid = Some(HID(h_sample.hid as usize));
-                    let pid = PID(person.pid);
+                    person.hid = Some(h_sample.hid);
+                    let pid = person.pid;
                     queues.matched.insert(pid);
                     queues.unmatched.remove(&pid);
                     // TODO: handle assignment to household? Not included in python.
